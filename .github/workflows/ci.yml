@@ -55,4 +55,4 @@ jobs:
       - name: Test
         run: go test -tags sqlite_fts5 ./...
       - name: Build package
-        run: ./build-macos.sh
+        run: bash build-macos.sh
