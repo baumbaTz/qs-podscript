@@ -2,8 +2,12 @@
 
 **Podcast transcripts with speaker names – on your own computer, or shared by a group of volunteers.**
 
-***Made with AI - This will probably annoy people, but its the only way I was able to even get close to what i wanted. So feel free to find this terribad and not use it.***
+`
+#Made with AI
+This will annoy people, but its the only way I was able to even get close to what i wanted. 
 
+Feel free to find this terribad and not use it.
+`
 QS-PodScript follows podcast feeds, transcribes every episode with
 [whisper.cpp](https://github.com/ggml-org/whisper.cpp), works out **who said
 what** with [sherpa-onnx](https://github.com/k2-fsa/sherpa-onnx), recognizes
