@@ -1,0 +1,624 @@
+#!/usr/bin/env bash
+# QS-PodScript installer for Linux (x86_64)
+#
+# Installs everything QS-PodScript needs, detects the graphics card and builds a
+# GPU version of the transcription engine if possible:
+#   NVIDIA + CUDA toolkit  -> CUDA build   (fastest)
+#   any GPU with Vulkan    -> Vulkan build (NVIDIA, AMD, Intel)
+#   otherwise              -> CPU version  (works everywhere, slow)
+# Then it downloads the models, runs a self-check and, if you want (default:
+# no), sets QS-PodScript up as a background service that starts when you log in.
+#
+# Usage:  ./install.sh [options]
+#   --dir DIR      install location (default: ~/.local/share/qs-podscript)
+#   --cpu          don't try to use the graphics card
+#   --model NAME   speech model (default: turbo with GPU, turbo-q5 without)
+#   --gpu-speakers     speaker detection on the NVIDIA graphics card too
+#                      (downloads about 1.3 GB of NVIDIA libraries)
+#   --no-gpu-speakers  speaker detection on the processor (removes that part)
+#   --service      run QS-PodScript in the background, starting at login
+#   --no-service   don't offer the background service
+#   -y, --yes      answer every question with yes
+#   -n, --no       answer every question with no
+#   --defaults     don't ask, use the default answers
+#   --help
+#
+# Graphics drivers are NOT installed by this script (that can break a system);
+# if a card is found without a working driver it tells you what to do.
+# Re-running the script updates an existing installation and keeps its data.
+
+set -euo pipefail
+
+WHISPER_TAG="v1.9.2"          # must match the version the app expects
+MIN_GLIBC="2.34"
+PORT=8321
+# Where to download QS-PodScript from when the script is not run from the
+# unpacked release folder (set once releases are hosted):
+QSPODSCRIPT_URL="${QSPODSCRIPT_URL:-${PODSCRIBE_URL:-}}"
+
+INSTALL_DIR="${QSPODSCRIPT_DIR:-${PODSCRIBE_DIR:-$HOME/.local/share/qs-podscript}}"
+CPU_ONLY=0
+MODEL=""
+SERVICE=1
+WANT_SERVICE=""     # "" = ask, 1 = yes, 0 = no
+WANT_GPU_SPK=""     # "" = ask, 1 = yes, 0 = no
+AUTO_ANSWER=""       # "" = ask, y = yes to all, n = no to all, d = defaults
+
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --dir) INSTALL_DIR="$2"; shift 2 ;;
+    --cpu) CPU_ONLY=1; shift ;;
+    --model) MODEL="$2"; shift 2 ;;
+    --gpu-speakers) WANT_GPU_SPK=1; shift ;;
+    --no-gpu-speakers) WANT_GPU_SPK=0; shift ;;
+    --service) WANT_SERVICE=1; shift ;;
+    --no-service) SERVICE=0; WANT_SERVICE=0; shift ;;
+    --yes|-y) AUTO_ANSWER=y; shift ;;
+    --no|-n) AUTO_ANSWER=n; shift ;;
+    --defaults) AUTO_ANSWER=d; shift ;;
+    --help|-h) sed -n '2,28p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+    *) echo "Unknown option: $1 (see --help)"; exit 1 ;;
+  esac
+done
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+LOG="/tmp/qs-podscript-install-$$.log"
+: > "$LOG"
+
+if [ -t 1 ]; then B=$'\033[1m'; G=$'\033[32m'; Y=$'\033[33m'; R=$'\033[31m'; N=$'\033[0m'; else B=""; G=""; Y=""; R=""; N=""; fi
+step() { printf '\n%s==> %s%s\n' "$B" "$*" "$N"; echo "==> $*" >> "$LOG"; }
+info() { printf '    %s\n' "$*"; echo "    $*" >> "$LOG"; }
+ok()   { printf '    %s✓ %s%s\n' "$G" "$*" "$N"; echo "    OK $*" >> "$LOG"; }
+warn() { printf '    %s! %s%s\n' "$Y" "$*" "$N"; echo "    WARN $*" >> "$LOG"; }
+die()  { printf '\n%sError: %s%s\n    Details: %s\n' "$R" "$*" "$N" "$LOG"; exit 1; }
+run()  { echo "+ $*" >> "$LOG"; "$@" >> "$LOG" 2>&1; }   # quiet, logged
+
+ask() { # ask "question" [default y|n] -> 0 = yes
+  local def="${2:-y}" a
+  case "$AUTO_ANSWER" in
+    y) info "$1 -> yes (-y)"; return 0 ;;
+    n) info "$1 -> no (-n)"; return 1 ;;
+    d) [ "$def" = y ]; return ;;
+  esac
+  if [ "$def" = y ]; then
+    read -r -p "    $1 [Y/n] " a || true
+    [[ -z "$a" || "$a" =~ ^[YyJj] ]]
+  else
+    read -r -p "    $1 [y/N] " a || true
+    [[ "$a" =~ ^[YyJj] ]]
+  fi
+}
+
+version_ge() { [ "$(printf '%s\n%s\n' "$2" "$1" | sort -V | head -n1)" = "$2" ]; }
+
+# ------------------------------------------------------------------ checks
+step "Checking this system"
+[ "$(uname -s)" = "Linux" ] || die "This installer is for Linux."
+[ "$(uname -m)" = "x86_64" ] || die "Only x86_64 (64-bit PC) is supported so far, this is $(uname -m)."
+GLIBC="$(ldd --version 2>/dev/null | head -n1 | grep -oE '[0-9]+\.[0-9]+$' || true)"
+if [ -n "$GLIBC" ] && ! version_ge "$GLIBC" "$MIN_GLIBC"; then
+  die "Your system is too old (glibc $GLIBC, needs $MIN_GLIBC or newer - e.g. Ubuntu 22.04, Debian 12, Fedora 35)."
+fi
+ok "Linux x86_64, glibc ${GLIBC:-unknown}"
+
+if [ "$(id -u)" = 0 ]; then
+  SUDO=""
+  warn "Running as root: QS-PodScript will be installed for root. Better run it as your normal user."
+else
+  command -v sudo >/dev/null || die "sudo is needed to install packages. Install sudo or run as root."
+  SUDO="sudo"
+fi
+
+if   command -v apt-get >/dev/null; then PM=apt
+elif command -v dnf     >/dev/null; then PM=dnf
+elif command -v pacman  >/dev/null; then PM=pacman
+elif command -v zypper  >/dev/null; then PM=zypper
+else die "No supported package manager found (apt, dnf, pacman, zypper)."; fi
+ok "Package manager: $PM"
+
+APT_UPDATED=0
+pkg_install() { # pkg_install pkg... -> 0 if all installed
+  case "$PM" in
+    apt)
+      if [ "$APT_UPDATED" = 0 ]; then run $SUDO apt-get update || true; APT_UPDATED=1; fi
+      run $SUDO env DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends "$@" ;;
+    dnf)    run $SUDO dnf install -y "$@" ;;
+    pacman) run $SUDO pacman -S --needed --noconfirm "$@" ;;
+    zypper) run $SUDO zypper --non-interactive install "$@" ;;
+  esac
+}
+
+if [ -n "$SUDO" ]; then
+  info "Some steps need administrator rights - you may be asked for your password."
+  sudo -v || die "Could not get administrator rights."
+fi
+
+# ------------------------------------------------------------------ base packages
+step "Installing required programs"
+case "$PM" in
+  apt)    BASE=(ffmpeg curl ca-certificates tar unzip) ;;
+  dnf)    BASE=(curl ca-certificates tar unzip) ;;
+  pacman) BASE=(ffmpeg curl ca-certificates tar unzip) ;;
+  zypper) BASE=(curl ca-certificates tar unzip) ;;
+esac
+pkg_install "${BASE[@]}" || die "Installing ${BASE[*]} failed."
+if ! command -v ffmpeg >/dev/null; then
+  # Fedora ships "ffmpeg-free" (enough for podcasts); full ffmpeg needs RPM Fusion.
+  # openSUSE: ffmpeg-7 / ffmpeg-6 depending on release.
+  for p in ffmpeg ffmpeg-free ffmpeg-7 ffmpeg-6; do pkg_install "$p" && break || true; done
+fi
+command -v ffmpeg >/dev/null || die "Could not install ffmpeg. Please install it with your package manager and run this script again."
+ok "ffmpeg $(ffmpeg -version | head -n1 | awk '{print $3}')"
+
+# ------------------------------------------------------------------ old name
+# Before the rename the app was called "podscribe" and lived in
+# ~/.local/share/podscribe. Move that installation over: the data (transcripts,
+# people, voice samples, models, GPU build) is kept, old launchers are removed.
+OLD_DIR="$HOME/.local/share/podscribe"
+HAD_OLD_SERVICE=0
+if [ -d "$OLD_DIR" ] && [ "$OLD_DIR" != "$INSTALL_DIR" ]; then
+  step "Moving the old 'podscribe' installation to QS-PodScript"
+  if [ -f "$HOME/.config/systemd/user/podscribe.service" ]; then
+    HAD_OLD_SERVICE=1
+    run systemctl --user disable --now podscribe.service || true
+  fi
+  if pgrep -f "$OLD_DIR/podscribe" >/dev/null 2>&1; then
+    die "The old podscribe is still running. Close its window (or stop it), then run this installer again."
+  fi
+  if [ -d "$OLD_DIR/data" ] && [ ! -e "$INSTALL_DIR/data" ]; then
+    mkdir -p "$INSTALL_DIR"
+    mv "$OLD_DIR/data" "$INSTALL_DIR/data" || die "Could not move $OLD_DIR/data to $INSTALL_DIR/data."
+    [ -f "$OLD_DIR/install.log" ] && mv "$OLD_DIR/install.log" "$INSTALL_DIR/install-podscribe.log" || true
+    rm -rf "$OLD_DIR"
+    ok "Transcripts, people, models and the GPU build moved to $INSTALL_DIR"
+  elif [ -e "$INSTALL_DIR/data" ]; then
+    warn "Both $OLD_DIR and $INSTALL_DIR contain data - keeping the new one."
+    warn "The old folder is left untouched; delete it yourself once you don't need it."
+  else
+    rm -rf "$OLD_DIR"   # nothing worth keeping (no data folder)
+  fi
+  rm -f "$HOME/.config/systemd/user/podscribe.service" "$HOME/.local/share/applications/podscribe.desktop"
+  [ -L "$HOME/.local/bin/podscribe" ] && rm -f "$HOME/.local/bin/podscribe"
+  command -v systemctl >/dev/null && run systemctl --user daemon-reload || true
+  ok "Old menu entry, command and service removed"
+fi
+
+# ------------------------------------------------------------------ QS-PodScript files
+step "Installing QS-PodScript to $INSTALL_DIR"
+SRC=""
+if [ -x "$SCRIPT_DIR/qs-podscript" ] && [ -f "$SCRIPT_DIR/libsherpa-onnx-c-api.so" ]; then
+  SRC="$SCRIPT_DIR"
+elif [ -n "$QSPODSCRIPT_URL" ]; then
+  TMPD="$(mktemp -d)"
+  info "Downloading $QSPODSCRIPT_URL"
+  run curl -fL --retry 3 -o "$TMPD/qs-podscript.tar.gz" "$QSPODSCRIPT_URL" || die "Download failed."
+  run tar -C "$TMPD" -xzf "$TMPD/qs-podscript.tar.gz" || die "Unpacking failed."
+  SRC="$(dirname "$(find "$TMPD" -name qs-podscript -type f -perm -u+x | head -n1)")"
+  [ -n "$SRC" ] || die "Downloaded archive does not contain QS-PodScript."
+else
+  die "Run this script from the unpacked QS-PodScript folder (next to the QS-PodScript program)."
+fi
+mkdir -p "$INSTALL_DIR"
+if [ "$SRC" != "$INSTALL_DIR" ]; then
+  # stop a running instance before replacing the program
+  systemctl --user stop qs-podscript.service >/dev/null 2>&1 || true
+  for f in qs-podscript libsherpa-onnx-c-api.so libonnxruntime.so onnxruntime-version.txt README.txt install.sh; do
+    [ -e "$SRC/$f" ] && cp -f "$SRC/$f" "$INSTALL_DIR/"
+  done
+fi
+chmod +x "$INSTALL_DIR/qs-podscript" "$INSTALL_DIR/install.sh" 2>/dev/null || true
+"$INSTALL_DIR/qs-podscript" version >> "$LOG" 2>&1 || die "QS-PodScript does not start on this system."
+ok "QS-PodScript $("$INSTALL_DIR/qs-podscript" version | awk '{print $2}') installed"
+WDIR="$INSTALL_DIR/data/tools/whisper"
+
+# ------------------------------------------------------------------ graphics card
+step "Looking for a graphics card"
+HAS_NVIDIA=0; HAS_AMD=0; HAS_INTEL=0
+for v in /sys/class/drm/card*/device/vendor; do
+  [ -r "$v" ] || continue
+  case "$(cat "$v")" in
+    0x10de) HAS_NVIDIA=1 ;;
+    0x1002) HAS_AMD=1 ;;
+    0x8086) HAS_INTEL=1 ;;
+  esac
+done
+NV_OK=0; NV_NAME=""; NV_CC=""; NV_DRIVER_CUDA=""
+if command -v nvidia-smi >/dev/null && nvidia-smi >/dev/null 2>&1; then
+  NV_OK=1; HAS_NVIDIA=1
+  NV_NAME="$(nvidia-smi --query-gpu=name --format=csv,noheader | head -n1)"
+  NV_CC="$(nvidia-smi --query-gpu=compute_cap --format=csv,noheader 2>/dev/null | head -n1 | tr -d ' .' || true)"
+  NV_DRIVER_CUDA="$(nvidia-smi | grep -oE 'CUDA Version: [0-9]+\.[0-9]+' | awk '{print $3}' || true)"
+  ok "NVIDIA $NV_NAME (driver supports CUDA ${NV_DRIVER_CUDA:-?})"
+elif [ "$HAS_NVIDIA" = 1 ]; then
+  warn "An NVIDIA card is installed, but its driver is not working (nvidia-smi fails)."
+  case "$PM" in
+    apt)    warn "Ubuntu: 'sudo ubuntu-drivers install', then reboot. Debian: see wiki.debian.org/NvidiaGraphicsDrivers" ;;
+    dnf)    warn "Fedora: enable RPM Fusion and install akmod-nvidia, then reboot." ;;
+    pacman) warn "Arch: install the 'nvidia' (or nvidia-open) package, then reboot." ;;
+    zypper) warn "openSUSE: see en.opensuse.org/SDB:NVIDIA_drivers" ;;
+  esac
+  warn "Then run this installer again for GPU speed. Continuing for now."
+fi
+[ "$HAS_AMD" = 1 ] && ok "AMD graphics found"
+[ "$HAS_INTEL" = 1 ] && ok "Intel graphics found"
+[ "$HAS_NVIDIA$HAS_AMD$HAS_INTEL" = "000" ] && info "No graphics card found - using the processor."
+
+# ------------------------------------------------------------------ GPU build of whisper.cpp
+BACKEND="cpu"
+mem_avail_gb() { echo $(( $(awk '/MemAvailable/ {print $2}' /proc/meminfo) / 1024 / 1024 )); }
+
+build_whisper() { # build_whisper cuda|vulkan cmake-args...
+  local kind="$1"; shift
+  # the Vulkan build compiles one ~120 MB generated file that alone needs
+  # ~4 GB RAM (measured); CUDA kernels need less but still a lot
+  local need=4; [ "$kind" = vulkan ] && need=6
+  if [ "$(mem_avail_gb)" -lt "$need" ]; then
+    warn "Building the $kind version needs about $need GB of free memory, only $(mem_avail_gb) GB is free."
+    warn "Close other programs and run the installer again to use the graphics card."
+    return 1
+  fi
+  local src; src="$(mktemp -d)"
+  info "Downloading whisper.cpp $WHISPER_TAG source"
+  run curl -fL --retry 3 -o "$src/w.tar.gz" "https://github.com/ggml-org/whisper.cpp/archive/refs/tags/$WHISPER_TAG.tar.gz" || return 1
+  run tar -C "$src" -xzf "$src/w.tar.gz" || return 1
+  local dir; dir="$(find "$src" -maxdepth 1 -type d -name 'whisper.cpp*' | head -n1)"
+  info "Compiling the $kind version - this can take 5-30 minutes, please wait..."
+  local t0=$SECONDS
+  run cmake -S "$dir" -B "$dir/build" -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=OFF \
+      -DWHISPER_BUILD_TESTS=OFF -DWHISPER_BUILD_SERVER=OFF "$@" || return 1
+  # some GPU source files need ~4 GB RAM each to compile: limit parallel jobs
+  local memgb jobs
+  memgb=$(mem_avail_gb)
+  jobs=$(( memgb / 4 )); [ "$jobs" -lt 1 ] && jobs=1
+  [ "$jobs" -gt "$(nproc)" ] && jobs=$(nproc)
+  info "Using $jobs parallel compile job(s) (${memgb} GB RAM free)"
+  run cmake --build "$dir/build" -j"$jobs" --target whisper-cli || return 1
+  [ -x "$dir/build/bin/whisper-cli" ] || return 1
+  "$dir/build/bin/whisper-cli" --help >> "$LOG" 2>&1 || return 1
+  mkdir -p "$WDIR"
+  rm -f "$WDIR"/*.so* "$WDIR"/whisper-cli
+  cp -f "$dir/build/bin/whisper-cli" "$WDIR/whisper-cli"
+  # sha256 ties the marker to this exact binary: if whisper-cli is ever
+  # replaced (e.g. by copying another computer's data folder), both QS-PodScript
+  # and this installer notice and don't trust the marker any more
+  printf 'backend=%s\nversion=%s\nbuilt=%s\nsha256=%s\n' "$kind" "$WHISPER_TAG" "$(date -u +%FT%TZ)" \
+    "$(sha256sum "$WDIR/whisper-cli" | cut -d' ' -f1)" > "$WDIR/BUILD_INFO"
+  rm -rf "$src"
+  ok "$kind version built in $(( (SECONDS - t0) / 60 )) min"
+}
+
+build_deps() {
+  case "$PM" in
+    apt)    pkg_install build-essential cmake ;;
+    dnf)    pkg_install gcc-c++ make cmake ;;
+    pacman) pkg_install base-devel cmake ;;
+    zypper) pkg_install gcc-c++ make cmake ;;
+  esac
+}
+
+find_nvcc() {
+  for n in nvcc /usr/local/cuda/bin/nvcc /opt/cuda/bin/nvcc; do
+    if command -v "$n" >/dev/null 2>&1; then command -v "$n"; return 0; fi
+  done
+  return 1
+}
+
+try_cuda() {
+  [ "$NV_OK" = 1 ] || return 1
+  step "Setting up NVIDIA CUDA"
+  local nvcc
+  if ! nvcc="$(find_nvcc)"; then
+    case "$PM" in
+      apt)    info "Installing the CUDA toolkit (large download)"; pkg_install nvidia-cuda-toolkit || true ;;
+      pacman) info "Installing the CUDA toolkit (large download, several GB)"; pkg_install cuda || true ;;
+      *)      info "No CUDA toolkit in the standard repositories of this distribution." ;;
+    esac
+    nvcc="$(find_nvcc)" || { warn "CUDA toolkit not available - trying Vulkan instead."; return 1; }
+  fi
+  local cv; cv="$("$nvcc" --version | grep -oE 'release [0-9]+\.[0-9]+' | awk '{print $2}')"
+  info "CUDA toolkit $cv ($nvcc)"
+  if ! version_ge "$cv" "12.0"; then
+    warn "CUDA toolkit $cv is too old (needs 12.0 or newer) - trying Vulkan instead."; return 1
+  fi
+  if [ -n "$NV_DRIVER_CUDA" ] && ! version_ge "$NV_DRIVER_CUDA" "$cv"; then
+    warn "The NVIDIA driver only supports CUDA $NV_DRIVER_CUDA, the toolkit is $cv - update the driver. Trying Vulkan instead."; return 1
+  fi
+  build_deps || { warn "Could not install compilers."; return 1; }
+  local arch="${NV_CC:-}"; [ -n "$arch" ] || arch="61;70;75;80;86;89"   # only the own card = much faster build
+  PATH="$(dirname "$nvcc"):$PATH" build_whisper cuda -DGGML_CUDA=ON -DCMAKE_CUDA_ARCHITECTURES="$arch" \
+      -DCMAKE_CUDA_COMPILER="$nvcc" || { warn "CUDA build failed (details in $LOG) - trying Vulkan instead."; return 1; }
+  BACKEND=cuda
+}
+
+vulkan_gpu_present() { # a real GPU (not the llvmpipe software renderer) visible to Vulkan
+  command -v vulkaninfo >/dev/null || return 1
+  vulkaninfo --summary 2>/dev/null | grep -i 'deviceType' | grep -qiv 'CPU'
+}
+
+try_vulkan() {
+  [ "$HAS_NVIDIA$HAS_AMD$HAS_INTEL" != "000" ] || return 1
+  [ "$HAS_NVIDIA" = 1 ] && [ "$NV_OK" = 0 ] && [ "$HAS_AMD$HAS_INTEL" = "00" ] && return 1
+  step "Setting up Vulkan (graphics card acceleration)"
+  case "$PM" in
+    apt)    pkg_install vulkan-tools libvulkan-dev glslc spirv-headers || true ;;
+    dnf)    pkg_install vulkan-tools vulkan-headers vulkan-loader-devel glslc spirv-headers-devel || true ;;
+    pacman) pkg_install vulkan-tools vulkan-headers vulkan-icd-loader shaderc spirv-headers || true ;;
+    zypper) pkg_install vulkan-tools vulkan-devel shaderc spirv-headers || true ;;
+  esac
+  if ! vulkan_gpu_present; then
+    warn "No graphics card is usable through Vulkan (driver missing?). Using the processor."; return 1
+  fi
+  command -v glslc >/dev/null || { warn "Vulkan shader compiler (glslc) not available on this system. Using the processor."; return 1; }
+  info "Vulkan device: $(vulkaninfo --summary 2>/dev/null | grep -i 'deviceName' | grep -iv llvmpipe | head -n1 | sed 's/.*= //')"
+  build_deps || { warn "Could not install compilers."; return 1; }
+  build_whisper vulkan -DGGML_VULKAN=ON || { warn "Vulkan build failed (details in $LOG). Using the processor."; return 1; }
+  BACKEND=vulkan
+}
+
+existing_build="$(sed -n 's/^backend=//p' "$WDIR/BUILD_INFO" 2>/dev/null || true)"
+existing_ver="$(sed -n 's/^version=//p' "$WDIR/BUILD_INFO" 2>/dev/null || true)"
+# only keep an existing GPU build if the binary really is one
+build_is_real() {
+  [ -x "$WDIR/whisper-cli" ] || return 1
+  local want; want="$(sed -n 's/^sha256=//p' "$WDIR/BUILD_INFO" 2>/dev/null || true)"
+  if [ -n "$want" ] && [ "$(sha256sum "$WDIR/whisper-cli" | cut -d' ' -f1)" != "$want" ]; then return 1; fi
+  case "$existing_build" in
+    cuda)   ldd "$WDIR/whisper-cli" 2>/dev/null | grep -q 'libcudart' ;;
+    vulkan) ldd "$WDIR/whisper-cli" 2>/dev/null | grep -q 'libvulkan' ;;
+    *)      return 1 ;;
+  esac
+}
+if [ -n "$existing_build" ] && ! build_is_real; then
+  warn "The installed whisper.cpp is not the $existing_build build any more (replaced by another version?) - building it again."
+  rm -f "$WDIR/BUILD_INFO" "$WDIR"/*.so* "$WDIR/whisper-cli"
+  existing_build=""
+fi
+if [ "$CPU_ONLY" = 1 ]; then
+  rm -f "$WDIR/BUILD_INFO"
+  info "--cpu given: using the processor version."
+elif [ -n "$existing_build" ] && [ "$existing_ver" = "$WHISPER_TAG" ] && [ -x "$WDIR/whisper-cli" ]; then
+  BACKEND="$existing_build"
+  ok "Keeping the existing $BACKEND build of whisper.cpp $WHISPER_TAG"
+else
+  try_cuda || try_vulkan || true
+  if [ "$BACKEND" = cpu ]; then
+    rm -f "$WDIR/BUILD_INFO"
+    info "Transcription will run on the processor (slower)."
+  fi
+fi
+
+# ------------------------------------------------------------------ models + self-check
+if [ -z "$MODEL" ]; then
+  if [ "$BACKEND" = cpu ]; then MODEL="turbo-q5"; else MODEL="turbo"; fi
+fi
+step "Downloading speech and speaker models ($MODEL) and running the self-check"
+info "This downloads about 1-2 GB."
+SETUP_ARGS=(setup --model "$MODEL")
+[ "$CPU_ONLY" = 1 ] && SETUP_ARGS+=(--cpu)
+if "$INSTALL_DIR/qs-podscript" "${SETUP_ARGS[@]}" 2>&1 | tee -a "$LOG" | grep -E '^\s+(ok|FAIL|WARN)|All checks passed|ERROR'; then :; fi
+if grep -q "All checks passed" "$LOG"; then
+  ok "Self-check passed"
+else
+  die "The self-check failed. The log above and $INSTALL_DIR/data/qs-podscript.log show why."
+fi
+DEVICE="$(grep -E 'ok +whisper' "$LOG" | tail -n1 | sed -E 's/.*(model load|test passed)\): //')"
+
+# ------------------------------------------------------------------ speaker detection on the graphics card
+# Optional (NVIDIA only): the GPU build of the same ONNX Runtime version the
+# package ships, plus the NVIDIA libraries it needs (CUDA 13, cuDNN 9) from
+# NVIDIA's official Python packages. Kept in data/tools/onnxruntime-gpu and
+# cuda/, re-applied on every update.
+ORT_VERSION="$(cat "$INSTALL_DIR/onnxruntime-version.txt" 2>/dev/null || echo 1.28.2)"
+ORT_GPU_URL="https://github.com/microsoft/onnxruntime/releases/download/v$ORT_VERSION/onnxruntime-linux-x64-gpu_cuda13-$ORT_VERSION.tgz"
+GPU_SPK_DIR="$INSTALL_DIR/data/tools/onnxruntime-gpu"
+CUDA_LIB_DIR="$INSTALL_DIR/cuda"
+PYPI="https://files.pythonhosted.org/packages"
+CUDA_WHEELS=(
+  "$PYPI/98/8a/3431271f6344874b8f1ac03f16b3d679c91493f8da63f716160403e6d0a0/nvidia_cuda_runtime-13.4.92-py3-none-manylinux2014_x86_64.manylinux_2_17_x86_64.whl 9641f797da20ce1dd8e779b6e96d08cf9ba564cec8e8225458811ee26423f3a5"
+  "$PYPI/7a/38/bdd540bf511d2c9b6f9efc71a81c60cb88e295be0b9312b61d19bbed2212/nvidia_cublas-13.8.0.4-py3-none-manylinux_2_27_x86_64.whl 9f17797dfcc048694461f4e47de17d2e3c25adf172ef723d2db0a07cd8744b89"
+  "$PYPI/07/73/3ee8e5b4cb891401e603ffd3a59b35c6afe785fd2de123afe7c7029603dc/nvidia_curand-10.4.4.72-py3-none-manylinux_2_27_x86_64.whl 25c3457ae7a224fdd484dab90b0fc5dc0e842fab5db3012afa4a5bd2af4eb7e5"
+  "$PYPI/ac/1b/ea72dd62f26ce3e0a7870b85148b75a5987507629b712deebeb87f7cce9a/nvidia_cudnn_cu13-9.26.0.51-py3-none-manylinux_2_27_x86_64.whl 9c976d539786698c71d6bcdbe2053b7485fae062ff7e1215d2f2ff67b1a2149a"
+  "$PYPI/56/9c/1342ebb460ce2afd014ec5a002adc99108e3c53a6b70f399cf64dd1f267d/nvidia_cuda_nvrtc-13.4.92-py3-none-manylinux2010_x86_64.manylinux_2_12_x86_64.whl 5ce8c97b00b232c4f50c8c4b5a3b68cafee08bdb82ea86f2052ff01d03194f4a"
+)
+CUDA_SONAMES="libcudart.so.13 libcublas.so.13 libcublasLt.so.13 libcurand.so.10 libcudnn.so.9 libnvrtc.so.13"
+
+gpu_spk_remove() {
+  rm -f "$INSTALL_DIR"/libonnxruntime_providers_*.so
+  [ -f "$SRC/libonnxruntime.so" ] && cp -f "$SRC/libonnxruntime.so" "$INSTALL_DIR/"
+  rm -rf "$GPU_SPK_DIR" "$CUDA_LIB_DIR"
+}
+gpu_spk_apply() {
+  cp -f "$GPU_SPK_DIR/libonnxruntime.so" "$GPU_SPK_DIR"/libonnxruntime_providers_cuda.so "$GPU_SPK_DIR"/libonnxruntime_providers_shared.so "$INSTALL_DIR/"
+}
+system_has_cuda13() {
+  local l; l="$(ldconfig -p 2>/dev/null || true)"
+  for so in $CUDA_SONAMES; do grep -q " $so " <<<"$l" || return 1; done
+}
+gpu_spk_install() {
+  local tmp; tmp="$(mktemp -d)"
+  if [ "$(cat "$GPU_SPK_DIR/version.txt" 2>/dev/null)" != "$ORT_VERSION" ]; then
+    info "Downloading ONNX Runtime $ORT_VERSION for NVIDIA graphics cards (about 240 MB)"
+    run curl -fL --retry 3 -o "$tmp/ort.tgz" "$ORT_GPU_URL" || { rm -rf "$tmp"; warn "Download failed."; return 1; }
+    run tar -C "$tmp" -xzf "$tmp/ort.tgz" || { rm -rf "$tmp"; warn "Unpacking failed."; return 1; }
+    local lib; lib="$(find "$tmp" -type d -name lib | head -n1)"
+    rm -rf "$GPU_SPK_DIR"; mkdir -p "$GPU_SPK_DIR"
+    cp -f "$lib/libonnxruntime.so.$ORT_VERSION" "$GPU_SPK_DIR/libonnxruntime.so" &&
+      cp -f "$lib/libonnxruntime_providers_cuda.so" "$lib/libonnxruntime_providers_shared.so" "$GPU_SPK_DIR/" ||
+      { rm -rf "$tmp" "$GPU_SPK_DIR"; warn "The ONNX Runtime archive looks different than expected."; return 1; }
+    echo "$ORT_VERSION" > "$GPU_SPK_DIR/version.txt"
+  fi
+  if system_has_cuda13; then
+    rm -rf "$CUDA_LIB_DIR"
+    ok "Using the CUDA 13 and cuDNN 9 libraries installed on this system"
+  elif [ ! -f "$CUDA_LIB_DIR/.complete" ]; then
+    info "Downloading NVIDIA CUDA 13 + cuDNN 9 libraries (about 1 GB, unpacked 1.7 GB)"
+    rm -rf "$CUDA_LIB_DIR"; mkdir -p "$CUDA_LIB_DIR"
+    local w url sum f
+    for w in "${CUDA_WHEELS[@]}"; do
+      url="${w% *}"; sum="${w#* }"; f="$tmp/$(basename "$url")"
+      info "  $(basename "$url" | cut -d- -f1-2)"
+      run curl -fL --retry 3 -o "$f" "$url" || { rm -rf "$tmp" "$CUDA_LIB_DIR"; warn "Download failed: $url"; return 1; }
+      echo "$sum  $f" | sha256sum -c - >> "$LOG" 2>&1 || { rm -rf "$tmp" "$CUDA_LIB_DIR"; warn "Checksum mismatch: $url"; return 1; }
+      run unzip -o -j -q "$f" 'nvidia/*/lib/*.so*' -d "$CUDA_LIB_DIR" || { rm -rf "$tmp" "$CUDA_LIB_DIR"; warn "Unpacking failed: $url"; return 1; }
+      rm -f "$f"
+    done
+    rm -f "$CUDA_LIB_DIR"/libnvblas*
+    touch "$CUDA_LIB_DIR/.complete"
+  fi
+  rm -rf "$tmp"
+  gpu_spk_apply
+}
+
+NV_MAJOR="${NV_DRIVER_CUDA%%.*}"
+GPU_SPK=0
+if [ "$WANT_GPU_SPK" = 0 ]; then
+  if [ -d "$GPU_SPK_DIR" ] || [ -d "$CUDA_LIB_DIR" ]; then
+    step "Speaker detection on the graphics card"
+    gpu_spk_remove; ok "Removed - speaker detection runs on the processor"
+  fi
+elif [ "$CPU_ONLY" = 1 ]; then
+  :
+elif [ "$NV_OK" != 1 ]; then
+  [ "$WANT_GPU_SPK" = 1 ] && warn "--gpu-speakers needs a working NVIDIA graphics card - speaker detection stays on the processor."
+  if [ -d "$GPU_SPK_DIR" ]; then gpu_spk_remove; fi
+elif [ -z "$NV_MAJOR" ] || [ "$NV_MAJOR" -lt 13 ]; then
+  if [ "$WANT_GPU_SPK" = 1 ] || [ -d "$GPU_SPK_DIR" ]; then
+    warn "Speaker detection on the graphics card needs NVIDIA driver 580 or newer (CUDA 13); this driver supports CUDA ${NV_DRIVER_CUDA:-?}. Staying on the processor."
+    gpu_spk_remove
+  fi
+else
+  step "Speaker detection on the graphics card"
+  if [ -d "$GPU_SPK_DIR" ] || [ "$WANT_GPU_SPK" = 1 ]; then
+    GPU_SPK=1
+  else
+    info "Speaker detection (telling voices apart) takes about as long as the transcription on the processor."
+    info "On your $NV_NAME it gets several times faster. This downloads about 1.3 GB of NVIDIA libraries."
+    ask "Use the graphics card for speaker detection too?" n && GPU_SPK=1
+  fi
+  if [ "$GPU_SPK" = 1 ]; then
+    if gpu_spk_install; then
+      CHECK="$("$INSTALL_DIR/qs-podscript" gpu-check 2>&1 || true)"
+      echo "$CHECK" >> "$LOG"
+      if grep -q "GPU-CHECK OK" <<<"$CHECK"; then
+        ok "Speaker detection uses your NVIDIA graphics card ($(grep -o 'cpu=[0-9]*ms gpu=[0-9]*ms' <<<"$CHECK"))"
+      else
+        warn "The graphics card test for speaker detection failed - QS-PodScript uses the processor instead."
+        warn "Details: $(tail -n 2 <<<"$CHECK" | tr '\n' ' ')"
+        warn "Remove this part again with: ./install.sh --no-gpu-speakers"
+      fi
+    else
+      warn "Speaker detection stays on the processor."
+      gpu_spk_remove
+    fi
+  else
+    info "Speaker detection runs on the processor (add it later with: ./install.sh --gpu-speakers)."
+  fi
+fi
+
+# ------------------------------------------------------------------ launchers
+step "Setting up launchers"
+mkdir -p "$HOME/.local/bin"
+ln -sf "$INSTALL_DIR/qs-podscript" "$HOME/.local/bin/qs-podscript"
+ok "Command 'qs-podscript' available (in ~/.local/bin)"
+
+HAVE_SYSTEMD=0
+if [ "$SERVICE" = 1 ] && command -v systemctl >/dev/null && systemctl --user show-environment >/dev/null 2>&1; then
+  HAVE_SYSTEMD=1
+fi
+SERVICE_FILE="$HOME/.config/systemd/user/qs-podscript.service"
+# default: no; when updating an installation that already has it: keep it
+SERVICE_DEFAULT=n
+[ -f "$SERVICE_FILE" ] && SERVICE_DEFAULT=y
+[ "$HAD_OLD_SERVICE" = 1 ] && SERVICE_DEFAULT=y   # the old podscribe had it
+if [ "$HAVE_SYSTEMD" = 1 ]; then
+  case "$WANT_SERVICE" in
+    1) USE_SERVICE=1 ;;
+    0) USE_SERVICE=0 ;;
+    *) if ask "Run QS-PodScript in the background, starting automatically when you log in?" "$SERVICE_DEFAULT"; then USE_SERVICE=1; else USE_SERVICE=0; fi ;;
+  esac
+else
+  USE_SERVICE=0
+fi
+if [ "$USE_SERVICE" = 1 ]; then
+  mkdir -p "$HOME/.config/systemd/user"
+  cat > "$HOME/.config/systemd/user/qs-podscript.service" <<EOF
+[Unit]
+Description=QS-PodScript - podcast transcription
+After=network-online.target
+
+[Service]
+ExecStart=$INSTALL_DIR/qs-podscript serve --no-browser --port $PORT
+Restart=on-failure
+RestartSec=10
+# transcription is heavy; keep the desktop responsive
+Nice=10
+
+[Install]
+WantedBy=default.target
+EOF
+  run systemctl --user daemon-reload
+  run systemctl --user enable --now qs-podscript.service || warn "Could not start the service."
+  OPEN_CMD="xdg-open http://127.0.0.1:$PORT/"
+  TERMINAL=false
+  ok "Background service running"
+else
+  OPEN_CMD="$INSTALL_DIR/qs-podscript serve"
+  TERMINAL=true
+  if [ -f "$SERVICE_FILE" ] && [ "$HAVE_SYSTEMD" = 1 ]; then
+    run systemctl --user disable --now qs-podscript.service || true
+    rm -f "$SERVICE_FILE"
+    run systemctl --user daemon-reload || true
+    info "Background service removed - start QS-PodScript with the menu entry or 'qs-podscript'."
+  fi
+  [ "$HAVE_SYSTEMD" = 0 ] && [ "$SERVICE" = 1 ] && info "No systemd user session - start QS-PodScript with the menu entry or 'qs-podscript'."
+fi
+mkdir -p "$HOME/.local/share/applications"
+cat > "$HOME/.local/share/applications/qs-podscript.desktop" <<EOF
+[Desktop Entry]
+Type=Application
+Name=QS-PodScript
+Comment=Podcast transcription with speaker detection
+Exec=$OPEN_CMD
+Terminal=$TERMINAL
+Categories=AudioVideo;Audio;Utility;
+EOF
+ok "Menu entry 'qs-podscript' created"
+
+cat > "$INSTALL_DIR/uninstall.sh" <<EOF
+#!/usr/bin/env bash
+# Removes QS-PodScript including all transcripts and downloaded models.
+read -r -p "Remove QS-PodScript and ALL its data in $INSTALL_DIR? [y/N] " a
+[[ "\$a" =~ ^[YyJj] ]] || exit 0
+systemctl --user disable --now qs-podscript.service 2>/dev/null || true
+rm -f "\$HOME/.config/systemd/user/qs-podscript.service" "\$HOME/.local/share/applications/qs-podscript.desktop" "\$HOME/.local/bin/qs-podscript"
+systemctl --user daemon-reload 2>/dev/null || true
+rm -rf "$INSTALL_DIR"
+echo "QS-PodScript removed. (ffmpeg and other system packages were left installed.)"
+EOF
+chmod +x "$INSTALL_DIR/uninstall.sh"
+cp -f "$LOG" "$INSTALL_DIR/install.log" 2>/dev/null || true
+
+# ------------------------------------------------------------------ summary
+step "Done"
+case "$BACKEND" in
+  cuda)   ok "Transcription uses your NVIDIA graphics card (CUDA)" ;;
+  vulkan) ok "Transcription uses your graphics card (Vulkan)" ;;
+  *)      info "Transcription runs on the processor. A long episode can take about as long as the episode itself, or longer." ;;
+esac
+[ -n "$DEVICE" ] && info "Self-check: $DEVICE"
+if [ -f "$INSTALL_DIR/libonnxruntime_providers_cuda.so" ]; then
+  ok "Speaker detection: NVIDIA graphics card (falls back to the processor if it doesn't work)"
+else
+  info "Speaker detection runs on the processor."
+fi
+echo
+if [ "$TERMINAL" = false ]; then
+  info "Open ${B}http://127.0.0.1:$PORT/${N} in your browser (or 'qs-podscript' in the app menu)."
+  info "Stop:    systemctl --user stop qs-podscript     Start: systemctl --user start qs-podscript"
+  info "To keep transcribing while logged out: sudo loginctl enable-linger $USER"
+else
+  info "Start QS-PodScript from the app menu or with: qs-podscript"
+fi
+info "Update:    run the install.sh of a newer version (your data is kept)"
+info "Uninstall: $INSTALL_DIR/uninstall.sh"
+info "Install log: $INSTALL_DIR/install.log"

@@ -1,0 +1,58 @@
+{{define "content"}}
+{{$p := .Data.Person}}
+<p class="crumb"><a href="/people">People</a></p>
+<div class="head-row">
+  <div>
+    <h1>{{$p.Name}}</h1>
+    <p class="sub">{{with $p.Feeds}}{{range $i, $f := .}}{{if $i}}, {{end}}{{$f}}{{end}}{{else}}Not assigned to a podcast{{end}}</p>
+  </div>
+</div>
+
+{{if .IsAdmin}}<section>
+  <h2 class="section-title">Settings</h2>
+  <form method="post" action="/people/{{$p.ID}}/rename" class="form inline-form">
+    <label>Name <input name="name" value="{{$p.Name}}" required></label>
+    <button type="submit">Rename</button>
+  </form>
+  <p class="sub narrow">Renaming changes the name everywhere – in all transcripts, lanes and downloads. Use it for typos; nothing else changes.</p>
+
+  <details class="panel danger" id="remove">
+    <summary>Remove {{$p.Name}}…</summary>
+    <p>Removing a person <b>can't be undone</b>. It means:</p>
+    <ul>
+      <li>{{with .Data.Samples}}All <b>{{len .}} voice sample{{if ne (len .) 1}}s{{end}}</b> of {{$p.Name}} are deleted. QS-PodScript no longer recognizes this voice.{{else}}{{$p.Name}} has no voice samples yet, so recognition doesn't change.{{end}}</li>
+      <li>{{$p.Name}} is taken off the people list of every podcast.</li>
+      <li>{{if .Data.Passages}}The <b>{{.Data.Passages}} passage{{if ne .Data.Passages 1}}s{{end}} in {{.Data.Episodes}} episode{{if ne .Data.Episodes 1}}s{{end}}</b> you assigned to {{$p.Name}} stay assigned, but are shown as <i>Removed person</i> from then on.{{else}}No passages are assigned to {{$p.Name}} by hand, so no transcript changes.{{end}}</li>
+      <li>Adding a person with the same name later creates a <b>new</b> person without samples – the old assignments don't come back.</li>
+    </ul>
+    <p class="sub">Just a typo in the name? Use <i>Rename</i> above instead. A wrong voice sample? Remove only that sample in the list below.</p>
+    <form method="post" action="/people/{{$p.ID}}/delete" class="form">
+      <label class="radio"><input type="checkbox" name="confirm" value="1" required> I understand – remove {{$p.Name}} and all voice samples for good.</label>
+      <button type="submit" class="danger">Remove {{$p.Name}}</button>
+    </form>
+  </details>
+</section>{{end}}
+
+<section>
+  <h2 class="section-title">Voice samples</h2>
+  <p class="sub narrow">Passages confirmed as {{$p.Name}}. Recognition compares every speaker turn with these. If a sample is actually someone else, remove it – one wrong sample causes wrong matches.</p>
+  {{with .Data.Samples}}
+  <table class="episodes">
+    <thead><tr><th>Episode</th><th>Position</th><th>Length</th><th><span class="sr">Action</span></th></tr></thead>
+    <tbody>
+    {{range .}}
+      <tr>
+        <td>{{if .EpisodeID}}<a href="/episodes/{{.EpisodeID}}?v={{.VersionID}}#t{{.StartMs}}">{{.EpisodeTitle}}</a>{{else}}<span class="sub">episode version removed</span>{{end}}</td>
+        <td class="date">{{clock .StartMs}}</td>
+        <td class="date">{{secs .Seconds}}</td>
+        <td class="act">{{if $.IsAdmin}}<form method="post" action="/samples/{{.ID}}/delete"><input type="hidden" name="person" value="{{$p.ID}}"><button type="submit" class="quiet small">Remove</button></form>{{end}}</td>
+      </tr>
+    {{end}}
+    </tbody>
+  </table>
+  {{else}}
+  <p class="empty">No samples yet. On an episode page, click a speaker name or select a passage (at least 2 seconds) and assign it to {{$p.Name}}.</p>
+  {{end}}
+</section>
+
+{{end}}

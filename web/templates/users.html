@@ -1,0 +1,39 @@
+{{define "content"}}
+<h1>Users</h1>
+<p class="actions"><a class="button quiet" href="/users/activity">Who did what</a> <a class="button quiet" href="/work">Helpers' work</a></p>
+<p class="sub narrow">Editors can fix speakers, text, ad/clip marks, people of a podcast and spelling fixes – only for the podcasts ticked here. Admins can do everything, including users, podcasts and transcribing. Reading is open to everybody without login.</p>
+{{$feeds := .Data.Feeds}}{{$me := .Data.Me}}
+{{range .Data.Users}}{{$u := .}}
+<details class="panel" id="u{{.ID}}">
+  <summary><b>{{.Name}}</b> <span class="tag-soft">{{if eq .Role "admin"}}admin{{else}}editor · {{len .Podcasts}} podcast{{if ne (len .Podcasts) 1}}s{{end}}{{end}}</span>
+    {{with index $.Data.Stats .ID}}<small class="sub">· {{.Transcribed}} transcribed · {{.CleanedEps}} cleaned up · last active {{ago .LastActive}}</small>{{end}}</summary>
+  <p><a href="/users/{{.ID}}">Full record: episodes, changes, computers →</a></p>
+  <form method="post" action="/users/{{.ID}}" class="form">
+    <label class="radio"><input type="checkbox" name="admin" value="1" {{if eq .Role "admin"}}checked{{end}} {{if and $me (eq $me.ID .ID)}}disabled{{end}}> Admin (may do everything)</label>
+    {{if and $me (eq $me.ID .ID)}}<input type="hidden" name="admin" value="1">{{end}}
+    <fieldset>
+      <legend>May edit these podcasts</legend>
+      {{range $feeds}}<label class="radio"><input type="checkbox" name="podcast" value="{{.ID}}" {{if index $u.Podcasts .ID}}checked{{end}}> {{.Title}}</label>{{else}}<small>No podcasts yet.</small>{{end}}
+    </fieldset>
+    <label>New password <input type="password" name="password" autocomplete="new-password" placeholder="leave empty to keep it"></label>
+    <button type="submit">Save</button>
+  </form>
+  {{if not (and $me (eq $me.ID .ID))}}
+  <form method="post" action="/users/{{.ID}}/delete" class="form">
+    <label class="radio"><input type="checkbox" name="confirm" value="1" required> Remove {{.Name}} (their corrections stay)</label>
+    <button type="submit" class="danger">Remove user</button>
+  </form>
+  {{end}}
+</details>
+{{end}}
+
+<section class="panel">
+  <h2 class="section-title">Add a user</h2>
+  <form method="post" action="/users" class="form">
+    <label>Name <input name="name" required autocomplete="off"></label>
+    <label>Password <input type="password" name="password" required minlength="10" autocomplete="new-password"><small>At least 10 characters. Tell it to the person; they can't change it themselves yet.</small></label>
+    <label class="radio"><input type="checkbox" name="admin" value="1"> Admin</label>
+    <button type="submit">Add user</button>
+  </form>
+</section>
+{{end}}

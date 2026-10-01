@@ -1,0 +1,12 @@
+{{define "content"}}
+<section class="login">
+  <h1>Log in</h1>
+  <p class="sub narrow">Everybody can read the transcripts. Log in to fix speakers and text of the podcasts you have rights for.</p>
+  <form method="post" action="/login" class="form">
+    <input type="hidden" name="next" value="{{.Data.Next}}">
+    <label>Name <input name="name" autocomplete="username" required autofocus></label>
+    <label>Password <input type="password" name="password" autocomplete="current-password" required></label>
+    <button type="submit">Log in</button>
+  </form>
+</section>
+{{end}}

@@ -1,0 +1,15 @@
+{{define "content"}}
+<p class="crumb"><a href="/users">Users</a></p>
+<h1>Who did what</h1>
+<p class="sub narrow">The last 300 actions of all users: logins, connected computers, transcribed episodes, corrections, spelling fixes, people of podcasts, user management.</p>
+{{template "activityTable" .Data.Activity}}
+{{end}}
+
+{{define "activityTable"}}
+{{with .}}
+<table class="episodes activity">
+  <thead><tr><th>When</th><th>Who</th><th>What</th><th>Episode</th></tr></thead>
+  <tbody>{{range .}}<tr><td class="date">{{ago .At}}</td><td>{{.User}}</td><td>{{.Action}}{{with .Detail}} <small class="sub">({{.}})</small>{{end}}</td><td>{{if .EpisodeID}}<a href="/episodes/{{.EpisodeID}}">{{.Episode}}</a>{{end}}</td></tr>{{end}}</tbody>
+</table>
+{{else}}<p class="empty">Nothing yet.</p>{{end}}
+{{end}}

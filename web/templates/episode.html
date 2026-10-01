@@ -1,0 +1,246 @@
+{{define "content"}}
+{{$e := .Data.Episode}}
+<p class="crumb"><a href="/feeds/{{.Data.Feed.ID}}">{{with .Data.Feed.ImageURL}}<img class="art art-s" src="{{.}}" alt="">{{end}}{{.Data.Feed.Title}}</a></p>
+<div class="head-row">
+  <div>
+    <h1>{{$e.Title}}</h1>
+    <p class="sub">{{date $e.PubDate}}{{with .Data.Version}}, {{secs .AudioSeconds}} long{{end}}{{with .Data.Speakers}}, {{len .}} speakers{{end}}{{if $.CanEdit $e.FeedID}}{{with .Data.Version}}{{with .DiarizeInfo}} ({{.}}){{end}}{{end}}{{end}}</p>
+  </div>
+  <div class="actions">
+    {{if and $.IsAdmin (ne $e.Status "processing")}}
+    <form method="post" action="/episodes/{{$e.ID}}/process">
+      <button type="submit" class="quiet" {{if not .Setup.Ready}}disabled{{end}}>Transcribe again</button>
+    </form>
+    {{end}}
+    {{with .Data.Version}}{{if and $.IsAdmin .AudioFile (ne $e.Status "processing")}}
+    <form method="post" action="/episodes/{{$e.ID}}/rediarize">
+      <input type="hidden" name="v" value="{{.ID}}">
+      <button type="submit" class="quiet" title="Keeps this transcript, only detects speakers again with the current settings (Setup page)">Redo speaker detection</button>
+    </form>
+    {{end}}{{end}}
+    {{with .Data.Version}}{{if and ($.CanEdit $e.FeedID) (eq .Status "done") .AudioFile}}
+    <form method="post" action="/versions/{{.ID}}/identify">
+      <button type="submit" class="quiet" title="Compares every speaker turn with the voice samples of known people">Identify speakers</button>
+    </form>
+    {{end}}{{end}}
+    {{with .Data.Version}}{{if and ($.CanEdit $e.FeedID) (eq .Status "done")}}
+    <form method="post" action="/versions/{{.ID}}/voicemerge">
+      <button type="submit" class="quiet" title="Joins voices with similar voiceprints, using the setting from the Setup page. Takes a second.">Merge similar voices</button>
+    </form>
+    {{end}}{{end}}
+    {{if .Data.VersionID}}<a class="button quiet" href="/episodes/{{$e.ID}}/transcript.txt?v={{.Data.VersionID}}">Download text</a>{{end}}
+    {{if .Data.HasAds}}<a class="button quiet" href="/episodes/{{$e.ID}}/transcript.txt?v={{.Data.VersionID}}&amp;ads=0">Download text without ads</a>{{end}}
+  </div>
+</div>
+
+{{if $.CanEdit $e.FeedID}}{{with .Data.PendingJob}}<div class="flash" data-autoreload>A new {{.}} of this episode is {{if eq $e.Status "leased"}}being done on a helper's computer right now{{else}}waiting for a helper's computer{{end}}. It will appear as a new version; until then you see the current one.{{if $.ViaLocal}} This page reloads by itself when your computer is done.{{end}}</div>{{end}}{{end}}
+{{if .ServerMode}}{{if or .Data.TranscribedBy .Data.Cleanup}}
+<p class="credits">{{with .Data.TranscribedBy}}Transcribed by {{.}}{{end}}{{if and .Data.TranscribedBy .Data.Cleanup}} · {{end}}{{with .Data.Cleanup}}Cleaned up by {{range $i, $c := .}}{{if $i}}, {{end}}{{$c.Name}} ({{$c.Count}}){{end}}{{end}}</p>
+{{end}}{{end}}
+{{if and ($.CanEdit $e.FeedID) .Data.QuizOpen .Data.Audio}}
+<p class="quiz-line"><span>Look Who's Talking Now: <b>{{.Data.QuizPercent}}%</b> of this episode checked{{if lt .Data.QuizPercent 100}} – help in small pieces of about half a minute{{end}}.</span>
+  {{if lt .Data.QuizPercent 100}}<a class="button quiet small" href="/episodes/{{$e.ID}}/quiz">Check in small pieces</a>{{end}}</p>
+{{end}}
+{{if $.CanEdit $e.FeedID}}{{with .Data.EpisodePeople}}{{if .People}}
+<details class="panel settings" id="who">
+  <summary>People in this episode <span class="sub">– {{.Summary}}</span></summary>
+  <p class="sub narrow">Tell QS-PodScript who is (and who isn't) in this episode. Speaker recognition then only picks from these people – everybody else stays an unnamed voice (a guest, a movie clip) instead of being mistaken for someone who isn't there. Your own corrections are kept.</p>
+  <form method="post" action="/episodes/{{$e.ID}}/people" class="form">
+    <div class="actions">
+      <button type="submit" name="preset" value="hosts" class="quiet small">Only the hosts</button>
+      <button type="submit" name="preset" value="regulars" class="quiet small">Hosts and regulars</button>
+      <button type="submit" name="preset" value="all" class="quiet small">Everybody (no limit)</button>
+    </div>
+    <fieldset class="people-checks">
+      <legend>Or pick the people:</legend>
+      {{range .People}}<label class="radio"><input type="checkbox" name="person" value="{{.ID}}" {{if .In}}checked{{end}}> <span class="{{spClass .Label}} pname">{{.Name}}</span>{{if .Role}} <small class="sub">({{roleText .Role}})</small>{{end}}</label>{{end}}
+    </fieldset>
+    <button type="submit">Save and recognize again</button>
+  </form>
+</details>
+{{end}}{{end}}{{end}}
+{{if and ($.CanEdit $e.FeedID) (gt (len .Data.Versions) 1)}}
+<details class="panel versions">
+  <summary>Versions ({{len .Data.Versions}})</summary>
+  <table>
+    <tbody>
+    {{range .Data.Versions}}
+      <tr {{if eq .ID $.Data.VersionID}}class="viewing"{{end}}>
+        <td>{{datetime .CreatedAt}}</td>
+        <td>{{.WhisperModel}} ({{.WhisperBackend}})</td>
+        <td>{{if eq .Status "done"}}{{.NumClusters}} voices{{else}}{{.Status}}{{end}}</td>
+        <td class="timing">{{.Timing}}{{with .DiarizeInfo}}<br>{{.}}{{end}}</td>
+        <td>
+          {{if eq .Status "done"}}
+            {{if and $e.ActiveVersionID.Valid (eq .ID $e.ActiveVersionID.Int64)}}<span class="tag">Main version</span>
+            {{else}}
+              <a href="?v={{.ID}}">View</a>
+              {{if $.IsAdmin}}<form method="post" action="/episodes/{{$e.ID}}/activate" class="inline">
+                <input type="hidden" name="v" value="{{.ID}}"><button type="submit" class="quiet small">Make main version</button>
+              </form>{{end}}
+            {{end}}
+          {{else if .Error}}<span class="ep-err">{{.Error}}</span>{{end}}
+        </td>
+      </tr>
+    {{end}}
+    </tbody>
+  </table>
+</details>
+{{end}}
+
+{{with .Data.Utterances}}
+  {{with $.Data.Lanes}}
+  <section class="lanes" id="lanes" data-total="{{$.Data.TotalMs}}" aria-label="Who speaks when">
+    {{range .}}
+    <div class="lane">
+      {{if ge .Label 0}}<button type="button" class="lane-name {{spClass .Label}}" data-label="{{.Label}}" title="Merge this speaker into another">{{label .Label}} <small>{{.Share}}%</small></button>
+      {{else}}<span class="lane-name {{spClass .Label}}">{{label .Label}} <small>{{.Share}}%</small></span>{{end}}
+      <div class="lane-track {{spClass .Label}}">{{range .Blocks}}<i style="left:{{printf "%.3f" .Left}}%;width:{{printf "%.3f" .Width}}%"></i>{{end}}<b class="playhead" hidden></b></div>
+    </div>
+    {{end}}
+    {{with $.Data.CheckedLane}}
+    <div class="lane lane-mark">
+      <span class="lane-name mark-checked" title="Passages where a person confirmed or fixed the speakers">{{.Name}} <small>{{clock .TotalMs}}</small></span>
+      <div class="lane-track mark-checked">{{range .Blocks}}<i style="left:{{printf "%.3f" .Left}}%;width:{{printf "%.3f" .Width}}%"></i>{{end}}<b class="playhead" hidden></b></div>
+    </div>
+    {{end}}
+    {{range $.Data.MarkLanes}}
+    <div class="lane lane-mark">
+      <span class="lane-name mark-{{.Mark}}">{{.Name}} <small>{{clock .TotalMs}}</small></span>
+      <div class="lane-track mark-{{.Mark}}">{{range .Blocks}}<i style="left:{{printf "%.3f" .Left}}%;width:{{printf "%.3f" .Width}}%"></i>{{end}}<b class="playhead" hidden></b></div>
+    </div>
+    {{end}}
+  </section>
+  {{end}}
+
+  {{if $.CanEdit $e.FeedID}}
+  {{with $.Data.Loops}}
+  <div class="flash err" role="alert">
+    Whisper got stuck repeating itself here, so the real speech is missing:
+    {{range $i, $l := .}}{{if $i}}, {{end}}<a href="#at{{$l.StartMs}}">{{clock $l.StartMs}}</a> ("{{$l.Phrase}}" ×{{$l.Times}}){{end}}.
+    "Transcribe again" with the current settings usually fixes it.
+  </div>
+  {{end}}
+  {{if $.Data.AutoIdentified}}<p class="hint">Speakers recognized from known voices in {{$.Data.AutoIdentified}} passages. Your own corrections always win; "Identify speakers" runs recognition again.</p>{{end}}
+  {{if $.Data.Carried}}
+  <div class="panel carried">
+    <span>Speakers carried over from the previous version: {{$.Data.Carried}} passages (as that version showed them).</span>
+    {{if $.CanEdit $e.FeedID}}<form method="post" action="/versions/{{$.Data.VersionID}}/carried/delete" class="inline"><button type="submit" class="quiet small">Undo all</button></form>{{end}}
+  </div>
+  {{end}}
+  {{end}}{{/* editors only */}}
+  {{if $.CanEdit $e.FeedID}}{{with $.Data.ListCorrections}}
+  <details class="panel corrections">
+    <summary>Corrections ({{len .}})</summary>
+    <p class="sub">"Transcribe again" and "Redo speaker detection" carry corrections about people, crosstalk, text and ad/clip marks over to the new version. Assignments between unnamed voices can't be carried over.</p>
+    <ul>
+    {{range .}}
+      <li>
+        {{if .Auto}}Automatically merged: {{label .From}} → {{label .Label}} <small class="sub">(similarity {{printf "%.2f" .Score}})</small>
+        {{else if eq .Kind "mark"}}<a href="#at{{.StartMs}}">{{clock .StartMs}}–{{clock .EndMs}}</a> marked as {{markName .Text}}
+        {{else if eq .Kind "text"}}Text at <a href="#at{{.StartMs}}">{{clock .StartMs}}</a> → {{if .Text}}“{{.Text}}”{{else}}deleted{{end}}
+        {{else if eq .Kind "merge"}}All of {{label .From}} → {{label .Label}}
+        {{else}}<a href="#at{{.StartMs}}">{{clock .StartMs}}–{{clock .EndMs}}</a> → {{label .Label}}{{end}}
+        {{if $.CanEdit $e.FeedID}}<form method="post" action="/versions/{{$.Data.VersionID}}/corrections/{{.ID}}/delete" class="inline"><button type="submit" class="quiet small">Undo</button></form>{{end}}
+      </li>
+    {{end}}
+    </ul>
+  </details>
+  {{end}}{{end}}
+
+  {{if $.CanEdit $e.FeedID}}
+  <p class="hint">Double-click a word to play from there or correct it; select several words, click a speaker name or a name in the lanes above to fix who is speaking. Keys: ← → jump 1 second (with Shift 5 seconds), Space plays and pauses. <a href="/help#speakers">More in the manual</a>.</p>
+  {{else}}
+  <p class="hint">Click a time to play from there. Keys: ← → jump 1 second (with Shift 5 seconds), Space plays and pauses.{{if $.ServerMode}}{{if not $.User}} <a href="/login">Log in</a> to fix speakers or text.{{end}}{{end}}</p>
+  {{end}}
+
+  {{if or $.Data.HasAds $.Data.HasClips (and $.Data.QuizOpen ($.CanEdit $e.FeedID))}}
+  <div class="markfilter">
+    {{if and $.Data.QuizOpen ($.CanEdit $e.FeedID)}}<label title="Marks every paragraph whose speakers nobody has confirmed yet"><input type="checkbox" id="hl-unchecked" checked> Highlight what nobody has checked yet</label>{{end}}
+    {{if $.Data.HasAds}}<label><input type="checkbox" id="hide-ads"> Hide ads</label>{{end}}
+    {{if $.Data.HasClips}}<label><input type="checkbox" id="hide-clips"> Hide movie clips</label>{{end}}
+  </div>
+  {{end}}
+  <article class="transcript" id="transcript">
+    {{range .}}
+    <p class="u {{spClass .Label}}{{with .Mark}} mark-{{.}}{{end}}{{if $.Data.CheckedAt}}{{with index $.Data.CheckedAt .StartMs}} {{.}}{{end}}{{end}}" data-ms="{{.StartMs}}" data-end="{{.EndMs}}" data-label="{{.Label}}">
+      <a class="ts" href="#t{{.StartMs}}" title="Play from here">{{clock .StartMs}}</a>
+      {{if $.Data.CheckedAt}}{{with index $.Data.CheckedAt .StartMs}}<span class="chk" title="{{if eq . "checked"}}Speakers checked by a person{{else}}Partly checked by a person{{end}}">{{if eq . "checked"}}✓{{else}}◐{{end}}</span>{{end}}{{end}}<button type="button" class="who" title="Change speaker of this paragraph">{{label .Label}}</button>{{with .Mark}}<span class="badge mark-{{.}}">{{markName .}}</span>{{end}}
+      <span class="text">{{range .Words}}<span data-s="{{.StartMs}}" data-e="{{.EndMs}}"{{if or .Uncertain .Hit}} class="{{if .Uncertain}}lc{{end}}{{if .Hit}} hit{{end}}"{{end}}{{if .Orig}} title="Spelling fixed, was: {{.Orig}}"{{else if .Uncertain}} title="Whisper wasn't sure about this"{{end}}>{{.Text}}</span> {{end}}</span>
+    </p>
+    {{end}}
+  </article>
+
+  {{if $.CanEdit $e.FeedID}}
+  <div class="assign" id="assign" hidden role="dialog" aria-labelledby="assign-what">
+    <form method="post" action="/versions/{{$.Data.VersionID}}/corrections">
+      <button type="button" class="play-here" id="a-play">▶ Play from here</button>
+      <p id="assign-what"></p>
+      <input type="hidden" name="kind" id="a-kind">
+      <input type="hidden" name="start" id="a-start">
+      <input type="hidden" name="end" id="a-end">
+      <input type="hidden" name="from" id="a-from">
+      <div class="chips assign-chips">
+        {{range $.Data.ChipPeople}}<button type="submit" name="label" value="p{{.ID}}" data-label="{{.Label}}" class="chip-btn {{spClass .Label}}" formnovalidate>{{.Name}}</button>{{end}}
+        {{range $.Data.Speakers}}{{if not (isPerson .Label)}}<button type="submit" name="label" value="{{.Label}}" data-label="{{.Label}}" class="chip-btn {{spClass .Label}}" formnovalidate>{{label .Label}}</button>{{end}}{{end}}
+        <button type="submit" name="label" value="x" class="chip-btn spx" formnovalidate>Several at once</button>
+        <button type="submit" name="label" value="u" class="chip-btn spu" formnovalidate>Unknown / not speech</button>
+      </div>
+      <select name="label" id="a-label" required aria-label="Someone else">
+        <option value="" disabled selected>Someone else…</option>
+        {{with $.Data.People}}<optgroup label="People">
+          {{range .}}<option value="p{{.ID}}" data-label="{{.Label}}">{{.Name}}{{if .Role}} ({{roleText .Role}}){{end}}</option>{{end}}
+        </optgroup>{{end}}
+        <option value="newperson">New person…</option>
+        <optgroup label="Unnamed voices">
+          {{range $.Data.Speakers}}{{if not (isPerson .Label)}}<option value="{{.Label}}" data-label="{{.Label}}">{{label .Label}} ({{.Share}}%)</option>{{end}}{{end}}
+          <option value="new">New unnamed voice</option>
+        </optgroup>
+        <option value="x">Several people at once</option>
+        <option value="u">Unknown / not speech</option>
+      </select>
+      <input name="name" id="a-name" placeholder="Name of the new person" hidden>
+      <p class="assign-note">Assigning to a person saves the passage as a voice sample for recognition.</p>
+      <div class="assign-actions">
+        <button type="submit" id="a-submit">Assign</button>
+        <button type="button" class="quiet" id="assign-cancel">Cancel</button>
+      </div>
+    </form>
+    <form method="post" action="/versions/{{$.Data.VersionID}}/corrections" id="a-markform" class="assign-mark">
+      <input type="hidden" name="kind" value="mark">
+      <input type="hidden" name="start" id="a-mstart">
+      <input type="hidden" name="end" id="a-mend">
+      <span>Mark as</span>
+      <button type="submit" name="mark" value="ad" class="quiet small">Ad</button>
+      <button type="submit" name="mark" value="clip" class="quiet small">Movie clip</button>
+      <button type="submit" name="mark" value="" class="quiet small" title="Remove an ad or clip mark here">Normal</button>
+    </form>
+    <form method="post" action="/versions/{{$.Data.VersionID}}/corrections" id="a-textform" class="assign-text">
+      <input type="hidden" name="kind" value="text">
+      <input type="hidden" name="start" id="a-tstart">
+      <input type="hidden" name="end" id="a-tend">
+      <label for="a-text">Correct the text</label>
+      <textarea name="text" id="a-text" rows="3"></textarea>
+      <div class="assign-actions">
+        <button type="submit" class="quiet">Save text</button>
+      </div>
+    </form>
+  </div>
+  {{end}}
+{{else}}
+  <p class="empty">{{if eq $e.Status "error"}}Transcription failed: {{$e.Error}}{{else if eq $e.Status "processing"}}This episode is being transcribed right now.{{else}}Not transcribed yet.{{end}}</p>
+{{end}}
+
+{{with .Data.Audio}}
+<div class="player">
+  <audio id="audio" controls preload="metadata" src="{{.}}"></audio>
+  <label class="speed" title="Playback speed">
+    <span class="sr">Playback speed</span>
+    <select id="speed">
+      <option value="0.4">0.4×</option><option value="0.6">0.6×</option><option value="0.8">0.8×</option><option value="1" selected>1×</option><option value="1.2">1.2×</option><option value="1.4">1.4×</option><option value="1.6">1.6×</option>
+      <option value="1.8">1.8×</option><option value="2">2×</option><option value="2.2">2.2×</option><option value="2.4">2.4×</option><option value="2.6">2.6×</option><option value="2.8">2.8×</option><option value="3">3×</option>
+    </select>
+  </label>
+</div>
+{{end}}
+{{end}}

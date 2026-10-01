@@ -1,0 +1,14 @@
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+  - package-ecosystem: gomod
+    directory: /
+    schedule:
+      interval: monthly
+    # sherpa-onnx: the GPU install pins ONNX Runtime to the version it ships -
+    # update together on purpose, not automatically
+    ignore:
+      - dependency-name: "github.com/k2-fsa/*"

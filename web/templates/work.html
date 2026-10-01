@@ -1,0 +1,51 @@
+{{define "content"}}
+<p class="crumb"><a href="/users">Users</a></p>
+<h1>Helpers' work</h1>
+<h2 class="section-title">Being worked on</h2>
+<p class="sub narrow">Episodes that helpers' computers are transcribing right now. A reservation runs out on its own if a computer stops reporting (about 3 hours, longer while it keeps working). Hand one back to put it into the queue at once – that computer's result will then be refused. {{.Data.Waiting}} episode{{if ne .Data.Waiting 1}}s are{{else}} is{{end}} waiting.</p>
+{{with .Data.Reserved}}
+<table class="episodes">
+  <thead><tr><th>Episode</th><th>Podcast</th><th>Helper</th><th>Since</th><th>Runs out</th><th><span class="sr">Action</span></th></tr></thead>
+  <tbody>
+  {{range .}}
+    <tr>
+      <td><a href="/episodes/{{.EpisodeID}}">{{.Title}}</a>{{if .Fails}} <small class="sub">({{.Fails}} failed attempt{{if ne .Fails 1}}s{{end}} before)</small>{{end}}</td>
+      <td>{{.Podcast}}</td>
+      <td>{{.User}}{{with .Device}} <small class="sub">on {{.}}</small>{{end}}</td>
+      <td class="date">{{ago .Since}}</td>
+      <td class="date">{{ago .Expires}}</td>
+      <td class="act"><form method="post" action="/work/{{.EpisodeID}}/release"><button type="submit" class="quiet small">Hand back</button></form></td>
+    </tr>
+  {{end}}
+  </tbody>
+</table>
+{{else}}<p class="empty">Nothing is reserved right now.</p>{{end}}
+
+<h2 class="section-title">Waiting for a helper</h2>
+{{if .Data.SelfTranscribes}}<p class="sub narrow">This server transcribes itself too (Setup → Server → Who transcribes), so it may take some of these.</p>{{end}}
+{{with .Data.Queue}}
+<p class="sub narrow">In this order. They are done when a helper presses “Start transcribing” in their QS-PodScript with “Transcribe for the server” ticked, or clicks “Transcribe again” / “Redo speaker detection” on the episode's page in their QS-PodScript (then their computer does exactly that one). Nothing is taken automatically.</p>
+<table class="episodes">
+  <thead><tr><th>Episode</th><th>Podcast</th><th>Work</th></tr></thead>
+  <tbody>
+  {{range .}}
+    <tr><td><a href="/episodes/{{.EpisodeID}}">{{.Title}}</a>{{if .First}} <span class="tag-soft">asked for</span>{{end}}</td><td>{{.Podcast}}</td><td>{{.Kind}}</td></tr>
+  {{end}}
+  </tbody>
+</table>
+{{if gt $.Data.Waiting (len .)}}<p class="sub">… and {{$.Data.Waiting}} in total.</p>{{end}}
+{{else}}<p class="empty">Nothing is waiting.</p>{{end}}
+
+<h2 class="section-title">Failed on helpers' computers</h2>
+{{with .Data.Failed}}
+<table class="episodes">
+  <thead><tr><th>Episode</th><th>Podcast</th><th>Last error</th><th><span class="sr">Action</span></th></tr></thead>
+  <tbody>
+  {{range .}}
+    <tr><td><a href="/episodes/{{.EpisodeID}}">{{.Title}}</a></td><td>{{.Podcast}}</td><td><small>{{.Device}}</small></td>
+      <td class="act"><form method="post" action="/work/{{.EpisodeID}}/release"><input type="hidden" name="retry" value="1"><button type="submit" class="quiet small">Try again</button></form></td></tr>
+  {{end}}
+  </tbody>
+</table>
+{{else}}<p class="empty">None.</p>{{end}}
+{{end}}

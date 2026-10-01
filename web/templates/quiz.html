@@ -1,0 +1,63 @@
+{{define "content"}}
+{{$d := .Data}}
+<p class="crumb"><a href="/feeds/{{$d.Feed.ID}}">{{$d.Feed.Title}}</a>{{if and $d.EpisodeScope $d.Episode}} › <a href="/episodes/{{$d.Episode.ID}}">{{$d.Episode.Title}}</a>{{end}}</p>
+{{if and $d.Done $d.AllDone}}
+<h1>Yippee-Ki-Yay… Mother-Cleaner</h1>
+<p class="tagline">Nothing left to check or correct in any podcast right now – every passage has been looked at. Come back when new episodes are transcribed.</p>
+<section class="panel">
+  <p class="actions"><a class="button quiet" href="/feeds/{{$d.Feed.ID}}">Back to the podcast</a> <a class="button quiet" href="/">All podcasts</a></p>
+</section>
+{{else}}
+<h1>Look Who's Talking Now</h1>
+<p class="tagline">Who said what – checked in half-minute bites.</p>
+{{end}}
+{{if $d.Done}}{{if not $d.AllDone}}
+<section class="panel">
+  <p><b>Nothing left to check {{if $d.EpisodeScope}}in this episode{{else}}in this podcast right now{{end}}.</b>
+  {{if $d.EpisodeScope}}Every passage has been looked at by someone.{{else}}Either everything is checked, or the remaining passages are being checked by others at the moment – try again in a few minutes.{{end}}</p>
+  <p class="actions">{{if $d.EpisodeScope}}<a class="button" href="/feeds/{{$d.Feed.ID}}/quiz">Other episodes of this podcast</a> {{end}}<a class="button quiet" href="/feeds/{{$d.Feed.ID}}">Back to the podcast</a></p>
+</section>
+{{end}}
+{{else}}
+{{$ep := $d.Episode}}{{$w := $d.Window}}{{$vid := $d.Version.ID}}
+<p class="sub">From <a href="/episodes/{{$ep.ID}}?v={{$vid}}#at{{$w.StartMs}}">{{$ep.Title}}</a> at {{clock $w.StartMs}} · this episode is {{$d.EpisodePercent}}% checked</p>
+
+<div class="quiz-player">
+  <audio id="quiz-audio" controls preload="auto" src="{{$d.Audio}}" data-from="{{$d.AudioFrom}}" data-to="{{$d.AudioTo}}"></audio>
+  <button type="button" class="quiet small" id="quiz-replay" hidden>↺ Play again</button>
+</div>
+<p class="sub narrow">Listen, then check every line: the selected name is who QS-PodScript thinks is speaking. If that's wrong, pick the right person. Not sure? Skip – someone else will get this passage.</p>
+<p class="sub narrow" id="quiz-split-hint" hidden>Someone else takes over in the middle of a line? Click the first word they say – the line is split there and you can pick a speaker for each part.</p>
+
+<form method="post" action="/versions/{{$vid}}/check" class="quiz">
+  <input type="hidden" name="next" value="{{$d.Scope}}">
+  <input type="hidden" name="ws" value="{{$w.StartMs}}">
+  <input type="hidden" name="we" value="{{$w.EndMs}}">
+  <input type="hidden" name="n" value="{{len $d.Rows}}">
+  {{range $d.Rows}}{{$row := .}}
+  <fieldset class="qrow" data-s="{{.StartMs}}" data-e="{{.EndMs}}">
+    <legend class="sr">Line at {{.Offset}}, now: {{.CurrentName}}</legend>
+    <input type="hidden" name="s{{.I}}" value="{{.StartMs}}">
+    <input type="hidden" name="e{{.I}}" value="{{.EndMs}}">
+    <input type="hidden" name="o{{.I}}" value="{{.Current}}">
+    <p class="qtext"><a class="ts" href="#" data-seek="{{.StartMs}}" title="Play this line">{{.Offset}}</a>
+      <span class="text">{{range .Words}}<span data-s="{{.StartMs}}" data-e="{{.EndMs}}">{{.Text}}</span> {{end}}</span></p>
+    <div class="chips">
+      {{range .Choices}}<label class="chip {{.Class}}"><input type="radio" name="l{{$row.I}}" value="{{.Value}}" {{if eq .Value $row.Current}}checked{{end}}><span>{{.Name}}</span></label>{{end}}
+      <select name="x{{.I}}" aria-label="Someone else">
+        <option value="">Someone else…</option>
+        {{range $d.Others}}<option value="{{.Value}}">{{.Name}}</option>{{end}}
+        <option value="new">Someone not in this list (new voice)</option>
+      </select>
+    </div>
+  </fieldset>
+  {{end}}
+  <div class="actions quiz-actions">
+    <button type="submit">Save and next</button>
+    <a class="button quiet" href="{{$d.Scope}}?skip={{$d.Key}}">Skip – not sure</a>
+    <a class="quiet-link" href="/episodes/{{$ep.ID}}?v={{$vid}}#at{{$w.StartMs}}">Open in the episode</a>
+  </div>
+</form>
+{{end}}
+{{if $d.Mine}}<p class="sub">You have checked {{$d.Mine}} passage{{if ne $d.Mine 1}}s{{end}} so far – thank you!</p>{{end}}
+{{end}}

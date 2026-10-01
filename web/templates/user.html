@@ -1,0 +1,84 @@
+{{define "content"}}
+{{$u := .Data.U}}{{$st := .Data.Stats}}
+{{if not .Data.Own}}<p class="crumb"><a href="/users">Users</a></p>{{end}}
+<h1>{{if .Data.Own}}Your account{{else}}{{$u.Name}}{{end}}</h1>
+<p class="sub">{{if .Data.Own}}{{$u.Name}} · {{end}}{{if eq $u.Role "admin"}}admin{{else}}editor{{end}} · last active {{ago $st.LastActive}}</p>
+
+<div class="stat-row">
+  <div class="panel stat"><b>{{$st.Transcribed}}</b><span>episodes transcribed{{if $st.TranscribedSec}} ({{hours $st.TranscribedSec}} of audio){{end}}</span></div>
+  <div class="panel stat"><b>{{$st.CleanedEps}}</b><span>episodes cleaned up ({{$st.Corrections}} changes)</span></div>
+  <div class="panel stat"><b>{{$st.Checks}}</b><span>passages checked in “Look Who's Talking Now”</span></div>
+</div>
+
+{{if .Data.Own}}
+<section class="panel">
+  <h2 class="section-title">How others see you</h2>
+  <p class="sub narrow">Episodes show who transcribed and cleaned them up. Unless you choose otherwise you appear as <b>Volunteer {{$u.ID}}</b>. Admins always see your login name.</p>
+  <form method="post" action="/account/name" class="form">
+    <label>Public name <input name="display" value="{{$u.DisplayName}}" maxlength="60" placeholder="{{$u.Name}}"><small>Leave empty to use your login name.</small></label>
+    <label class="radio"><input type="checkbox" name="show" value="1" {{if $u.ShowName}}checked{{end}}> Show this name publicly</label>
+    <button type="submit">Save</button>
+  </form>
+  <p class="sub">Currently shown as: <b>{{$u.PublicName}}</b></p>
+</section>
+<details class="panel">
+  <summary>Change password</summary>
+  <form method="post" action="/account/password" class="form">
+    <label>Current password <input type="password" name="current" required autocomplete="current-password"></label>
+    <label>New password <input type="password" name="new" required minlength="10" autocomplete="new-password"></label>
+    <label>New password again <input type="password" name="again" required minlength="10" autocomplete="new-password"></label>
+    <button type="submit">Change password</button>
+  </form>
+</details>
+{{end}}
+
+<section>
+  <h2 class="section-title">Connected computers</h2>
+  <p class="sub narrow">Computers that connected their QS-PodScript with this account. Removing one ends its access: it can no longer transcribe for the server or show the server's podcasts until it connects again.</p>
+  {{with .Data.Tokens}}
+  <table class="episodes">
+    <thead><tr><th>Computer</th><th>Connected</th><th>Last seen</th><th><span class="sr">Action</span></th></tr></thead>
+    <tbody>
+    {{range .}}
+      <tr><td>{{.Name}}</td><td class="date">{{ago .CreatedAt}}</td><td class="date">{{ago .LastSeen}}</td>
+        <td class="act"><form method="post" action="/keys/{{.ID}}/delete"><input type="hidden" name="user" value="{{$u.ID}}"><button type="submit" class="quiet small">Remove</button></form></td></tr>
+    {{end}}
+    </tbody>
+  </table>
+  {{else}}<p class="empty">None.</p>{{end}}
+</section>
+
+<section>
+  <h2 class="section-title">Transcribed</h2>
+  {{with .Data.Transcribed}}
+  <table class="episodes">
+    <thead><tr><th>When</th><th>Episode</th><th>Podcast</th><th>Computer</th></tr></thead>
+    <tbody>{{range .}}<tr><td class="date">{{ago .At}}</td><td><a href="/episodes/{{.EpisodeID}}">{{.Title}}</a></td><td>{{.Podcast}}</td><td>{{.Device}}</td></tr>{{end}}</tbody>
+  </table>
+  {{else}}<p class="empty">Nothing yet.</p>{{end}}
+</section>
+
+<section>
+  <h2 class="section-title">Cleaned up</h2>
+  {{with .Data.Cleaned}}
+  <table class="episodes">
+    <thead><tr><th>Last change</th><th>Episode</th><th>Podcast</th><th>Changes</th></tr></thead>
+    <tbody>{{range .}}<tr><td class="date">{{ago .At}}</td><td><a href="/episodes/{{.EpisodeID}}">{{.Title}}</a></td><td>{{.Podcast}}</td><td>{{.Count}}</td></tr>{{end}}</tbody>
+  </table>
+  {{else}}<p class="empty">Nothing yet.</p>{{end}}
+</section>
+
+<section>
+  <h2 class="section-title">Recent activity</h2>
+  {{template "activityTable" .Data.Activity}}
+</section>
+{{end}}
+
+{{define "activityTable"}}
+{{with .}}
+<table class="episodes activity">
+  <thead><tr><th>When</th><th>Who</th><th>What</th><th>Episode</th></tr></thead>
+  <tbody>{{range .}}<tr><td class="date">{{ago .At}}</td><td>{{.User}}</td><td>{{.Action}}{{with .Detail}} <small class="sub">({{.}})</small>{{end}}</td><td>{{if .EpisodeID}}<a href="/episodes/{{.EpisodeID}}">{{.Episode}}</a>{{end}}</td></tr>{{end}}</tbody>
+</table>
+{{else}}<p class="empty">Nothing yet.</p>{{end}}
+{{end}}

@@ -1,0 +1,24 @@
+{{define "content"}}
+<h1>Add a podcast</h1>
+<form method="post" action="/feeds" class="form">
+  <label>Feed address
+    <input type="url" name="url" required placeholder="https://example.com/podcast/feed.xml" autofocus>
+    <small>The RSS link of the podcast. Episodes are transcribed oldest first.</small>
+  </label>
+  <label>Language
+    <input name="lang" value="en" list="langs" size="6">
+    <small>Two-letter code like en or de. "auto" detects it per episode, but a fixed language is faster and more reliable.</small>
+  </label>
+  <label>Number of regular speakers
+    <input type="number" name="speakers" min="0" max="12" value="0">
+    <small>Leave at 0 to detect automatically. That's usually better when guests or ads appear.</small>
+  </label>
+  <label>Hosts
+    <input name="names" placeholder="Scott, Brian, Randy, Joe">
+    <small>Optional, names separated by commas. Regular panel members can be added on the podcast's page later.</small>
+  </label>
+  <button type="submit">Add podcast</button>
+</form>
+{{template "langs"}}
+{{end}}
+

@@ -1,0 +1,215 @@
+{{define "content"}}
+{{$f := .Data.Feed}}
+<div class="head-row">
+  <div class="feed-head">
+    {{with $f.ImageURL}}<img class="art art-l" src="{{.}}" alt="">{{end}}
+    <div>
+    <h1>{{$f.Title}}</h1>
+    {{if not .Data.Public}}<p class="sub">{{$f.URL}}</p>{{else}}<p class="sub">{{index .Data.Counts "done"}} of {{index .Data.Counts "all"}} episodes transcribed</p>{{end}}
+    </div>
+  </div>
+  {{if $.IsAdmin}}<div class="actions">
+    <form method="post" action="/queue/start">
+      <input type="hidden" name="feed" value="{{$f.ID}}">
+      <input type="hidden" name="return" value="/feeds/{{$f.ID}}">
+      <button type="submit" {{if or (not .Setup.Ready) (ne .Status.Job "")}}disabled{{end}}>Transcribe this podcast</button>
+    </form>
+    {{if .Data.First}}<form method="post" action="/feeds/{{$f.ID}}/first">
+      <input type="hidden" name="undo" value="1">
+      <button type="submit" class="quiet" title="This podcast's waiting episodes go first. Click to return to the normal order (oldest of all podcasts first).">✓ Goes first · normal order</button>
+    </form>{{else}}<form method="post" action="/feeds/{{$f.ID}}/first">
+      <button type="submit" class="quiet" title="Its waiting episodes come next – also when transcribing is already running (after the current episode). Then the other podcasts follow.">Transcribe this podcast next</button>
+    </form>{{end}}
+    <form method="post" action="/feeds/{{$f.ID}}/refresh">
+      <button type="submit" class="quiet">Check for new episodes</button>
+    </form>
+    <form method="post" action="/feeds/{{$f.ID}}/verify">
+      <button type="submit" class="quiet" title="Finds transcripts that came out as garbage (e.g. only '!!!') and queues them again">Find broken transcripts</button>
+    </form>
+  </div>{{end}}
+</div>
+
+{{if and ($.CanEdit $f.ID) .Data.Quiz.Episodes}}{{$q := .Data.Quiz}}
+<section class="panel quiz-teaser">
+  <div>
+    <h2>Look Who's Talking Now</h2>
+    <p class="sub narrow">Help in small pieces: listen to about half a minute of an episode and confirm or fix who says what. No need to take on a whole episode.</p>
+    {{if $q.Checks}}<p class="sub">{{$q.Checks}} passage{{if ne $q.Checks 1}}s{{end}} checked so far{{if gt $q.Helpers 1}} by {{$q.Helpers}} people{{end}} · {{$q.Started}} of {{$q.Episodes}} episode{{if ne $q.Episodes 1}}s{{end}} started{{if $q.Finished}}, {{$q.Finished}} finished{{end}}</p>{{end}}
+  </div>
+  <a class="button" href="/feeds/{{$f.ID}}/quiz">Start</a>
+</section>
+{{end}}
+
+{{if $.IsAdmin}}<details class="panel settings">
+  <summary>Podcast settings</summary>
+  <form method="post" action="/feeds/{{$f.ID}}/settings" class="form">
+    <label>Language <input name="lang" value="{{$f.Language}}" list="langs" size="6"></label>
+    <label>Number of regular speakers <input type="number" name="speakers" min="0" max="12" value="{{$f.NumSpeakers}}">
+      <small>0 = detect automatically</small></label>
+    <label class="radio"><input type="checkbox" name="vad" value="1" {{if $f.VAD}}checked{{end}}> Voice activity detection – transcribe only speech, skip music and silence. Don't use it for podcasts where people sing: songs would be skipped.</label>
+    <button type="submit">Save settings</button>
+  </form>
+  {{template "langs"}}
+  <details class="danger" id="remove">
+    <summary>Remove this podcast</summary>
+    <p class="sub narrow">Removes <b>{{$f.Title}}</b> with all its episodes, transcripts, versions, speaker corrections, checked passages and audio copies – from this {{if .ServerMode}}server{{else}}computer{{end}}. People and their voice samples stay (they can be on other podcasts too); spelling fixes that were only for this podcast are removed. This can't be undone{{if not .ServerMode}} – make an export first (Setup) if you might want it back{{end}}.</p>
+    <form method="post" action="/feeds/{{$f.ID}}/delete" class="form">
+      <label class="radio"><input type="checkbox" name="confirm" value="1" required> Yes, remove this podcast and everything that belongs to it</label>
+      <button type="submit" class="danger">Remove podcast</button>
+    </form>
+  </details>
+</details>
+
+<details class="panel settings" id="feeds" {{if gt (len .Data.Sources) 1}}open{{end}}>
+  <summary>Feeds{{if gt (len .Data.Sources) 1}} ({{len .Data.Sources}}){{end}}</summary>
+  <p class="sub narrow">A podcast can have several feeds – for example the current feed plus archive feeds with older episodes. All episodes end up in one list and are transcribed oldest first. An episode that is in two feeds is kept only once.</p>
+  <table class="sources">
+    <tbody>
+    {{range .Data.Sources}}
+      <tr>
+        <td>
+          <b>{{if .Title}}{{.Title}}{{else}}(no title yet){{end}}</b>{{if .Main}} <span class="tag-soft">main feed</span>{{end}}<br>
+          <small class="sub url">{{.URL}}</small>
+          {{with .LastError}}<div class="ep-err">Last check failed: {{.}}</div>{{end}}
+        </td>
+        <td class="num">{{.Episodes}} episode{{if ne .Episodes 1}}s{{end}}</td>
+        <td class="row-actions">{{if gt (len $.Data.Sources) 1}}
+          <form method="post" action="/feeds/{{$f.ID}}/sources/{{.ID}}/delete" class="inline">
+            <button type="submit" class="quiet small" title="Removes this feed. Its episodes that were never transcribed are removed too; transcribed ones stay.">Remove</button>
+          </form>{{end}}
+        </td>
+      </tr>
+    {{end}}
+    </tbody>
+  </table>
+  <form method="post" action="/feeds/{{$f.ID}}/sources" class="form inline-form">
+    <label>Add another feed <input type="url" name="url" required placeholder="https://example.com/archive/feed.xml"></label>
+    <button type="submit">Add feed</button>
+  </form>
+</details>
+
+{{end}}
+{{if $.CanEdit $f.ID}}
+<details class="panel settings" id="people" {{if not .Data.Roster}}open{{end}}>
+  <summary>People on this podcast</summary>
+  <p class="sub narrow">Hosts are on (almost) every episode, regulars appear some of the time. Speaker recognition prefers these people for this podcast, but anyone known can still be recognized.</p>
+  <form method="post" action="/feeds/{{$f.ID}}/roster" class="form">
+    {{if .Data.People}}
+    <div class="roster-groups" data-feed="{{$f.ID}}">
+    {{range .Data.RosterGroups}}{{$g := .}}
+      <section class="roster-group">
+        <h3>{{.Title}} <small class="count">{{len .People}}</small></h3>
+        <table class="roster">
+          <tbody data-role="{{.Role}}">
+          {{range .People}}
+            <tr data-pid="{{.ID}}" data-name="{{.Name}}">
+              <td><a href="/people/{{.ID}}">{{.Name}}</a></td>
+              <td><div class="roles">
+                <label class="radio"><input type="radio" name="role_{{.ID}}" value="host" {{if eq $g.Role "host"}}checked{{end}}> Host</label>
+                <label class="radio"><input type="radio" name="role_{{.ID}}" value="pool" {{if eq $g.Role "pool"}}checked{{end}}> Regular</label>
+                <label class="radio"><input type="radio" name="role_{{.ID}}" value="" {{if eq $g.Role ""}}checked{{end}}> Not on this podcast</label>
+                <span class="saving" aria-live="polite"></span>
+              </div></td>
+            </tr>
+          {{end}}
+            <tr class="empty-row"{{if .People}} hidden{{end}}><td colspan="2">{{.Empty}}</td></tr>
+          </tbody>
+        </table>
+      </section>
+    {{end}}
+    </div>
+    {{end}}
+    <label>Add hosts <input name="new_hosts" placeholder="Names, separated by commas"></label>
+    <label>Add regulars <input name="new_pool" placeholder="Names, separated by commas"></label>
+    <button type="submit">Save people</button>
+    <small class="js-only" hidden>Changing Host / Regular / Not on this podcast is saved right away; the button is for adding new names.</small>
+  </form>
+</details>
+
+<details class="panel settings" id="spelling">
+  <summary>Spelling fixes{{with .Data.Spelling}} ({{len .}}){{end}}</summary>
+  <p class="sub narrow">Words whisper keeps writing differently are shown in one spelling. Only whole words are replaced, capitals don't matter, and the original transcript is kept: a fix applies to all episodes right away, and removing it brings the original back.</p>
+  {{with .Data.Spelling}}
+  <table class="spelling">
+    <thead><tr><th>Shown as</th><th>Replaces</th><th class="row-actions"><span class="sr">Actions</span></th></tr></thead>
+    <tbody>
+    {{range .}}
+      <tr>
+        <td><b>{{.Correct}}</b></td>
+        <td>{{range $i, $v := .Variants}}{{if $i}}, {{end}}{{$v}}{{end}}</td>
+        <td class="row-actions">
+          <form method="post" action="/feeds/{{$f.ID}}/spelling/{{.ID}}/scope" class="inline" data-switch>
+            {{if eq .FeedID 0}}<input type="hidden" name="all" value="0"><button type="submit" class="switch" role="switch" aria-checked="true" title="Used for all podcasts. Click to use it for this podcast only.">
+            {{else}}<input type="hidden" name="all" value="1"><button type="submit" class="switch" role="switch" aria-checked="false" title="Used for this podcast only. Click to use it for all podcasts.">{{end}}<span class="track" aria-hidden="true"></span>All podcasts</button>
+          </form>
+          <form method="post" action="/feeds/{{$f.ID}}/spelling/{{.ID}}/delete" class="inline"><button type="submit" class="quiet small">Remove</button></form>
+        </td>
+      </tr>
+    {{end}}
+    </tbody>
+  </table>
+  {{end}}
+  <form method="post" action="/feeds/{{$f.ID}}/spelling" class="form">
+    <label>Correct spelling <input name="correct" required placeholder="FilmSack"></label>
+    <label>Written wrong as <input name="variants" required placeholder="film sack, filmsack">
+      <small>Separate with commas. Several words must appear exactly in this order. Keep it safe: "Brian Done away" rather than "Done away" alone.</small></label>
+    <label class="radio"><input type="checkbox" name="all" value="1"> For all podcasts</label>
+    <button type="submit">Add spelling fix</button>
+  </form>
+  {{with .Data.NameRules}}
+  <p class="sub narrow">Automatic: full names of known people are always shown as entered (e.g. “{{lower (index . 0).Correct}}” → “{{(index . 0).Correct}}”){{if gt (len .) 1}} – {{len .}} names{{end}}.</p>
+  {{end}}
+</details>
+
+{{end}}
+
+{{$c := .Data.Counts}}{{$flt := .Data.Filter}}
+{{if .Data.Public}}
+<nav class="tabs" aria-label="Filter episodes">
+  <a href="?show=done" {{if eq $flt "done"}}aria-current="true"{{end}}>Transcribed <b>{{index $c "done"}}</b></a>
+  <a href="?show=all" {{if eq $flt "all"}}aria-current="true"{{end}}>All <b>{{index $c "all"}}</b></a>
+</nav>
+{{else}}
+<nav class="tabs" aria-label="Filter episodes">
+  <a href="?show=all" {{if eq $flt "all"}}aria-current="true"{{end}}>All <b>{{index $c "all"}}</b></a>
+  <a href="?show=done" {{if eq $flt "done"}}aria-current="true"{{end}}>Done <b>{{index $c "done"}}</b></a>
+  <a href="?show=waiting" {{if eq $flt "waiting"}}aria-current="true"{{end}}>Waiting <b>{{index $c "waiting"}}</b></a>
+  <a href="?show=failed" {{if eq $flt "failed"}}aria-current="true"{{end}}>Failed <b>{{index $c "failed"}}</b></a>
+  {{if index $c "skipped"}}<a href="?show=skipped" {{if eq $flt "skipped"}}aria-current="true"{{end}}>Not queued <b>{{index $c "skipped"}}</b></a>{{end}}
+  {{if $.IsAdmin}}<a href="/queue" class="tab-link">Queue →</a>{{end}}
+</nav>
+{{end}}
+{{if and (eq $flt "skipped") $.IsAdmin (index $c "skipped")}}
+<form method="post" action="/queue/0/restore" class="inline"><input type="hidden" name="feed" value="{{$f.ID}}"><input type="hidden" name="return" value="/feeds/{{$f.ID}}?show=skipped">
+  <p class="sub">Taken out of the queue – they stay here. <button type="submit" class="quiet small">Put all of this podcast back</button> or use “Transcribe now” for single ones.</p>
+</form>
+{{end}}
+
+<table class="episodes" data-autoreload>
+  <thead><tr><th>Date</th><th>Episode</th>{{if not .Data.Public}}<th>Status</th><th><span class="sr">Action</span></th>{{end}}</tr></thead>
+  <tbody>
+  {{range .Data.Episodes}}
+    <tr class="st-{{.Status}}">
+      <td class="date">{{date .PubDate}}</td>
+      <td>{{if .ActiveVersionID.Valid}}<a href="/episodes/{{.ID}}">{{.Title}}</a>{{else}}{{.Title}}{{end}}
+        {{if $.Data.Public}}{{if not .ActiveVersionID.Valid}} <small class="sub">– not transcribed yet</small>{{end}}</td>{{else}}
+        {{with index $.Data.SourceNames .SourceID}}<small class="sub src">{{.}}</small>{{end}}
+        {{if and (eq .Status "error") .Error}}<div class="ep-err">{{.Error}}</div>{{end}}</td>
+      <td class="status">{{statusTxt .Status}}</td>
+      <td class="act">{{if and $.IsAdmin (ne .Status "processing")}}
+        <form method="post" action="/episodes/{{.ID}}/process">
+          <input type="hidden" name="return" value="/feeds/{{$f.ID}}?show={{$flt}}">
+          <button type="submit" class="quiet small">{{if .ActiveVersionID.Valid}}Transcribe again{{else}}Transcribe now{{end}}</button>
+        </form>{{end}}{{if and $.IsAdmin (or (eq .Status "new") (eq .Status "queued"))}}
+        <form method="post" action="/queue/{{.ID}}/remove" class="inline">
+          <input type="hidden" name="return" value="/feeds/{{$f.ID}}?show={{$flt}}">
+          <button type="submit" class="quiet small" title="Take it out of the queue (it stays here as “Not queued”)">Don't transcribe</button>
+        </form>{{end}}
+      </td>{{end}}
+    </tr>
+  {{else}}
+    <tr><td colspan="4" class="empty">No episodes in this list.</td></tr>
+  {{end}}
+  </tbody>
+</table>
+{{end}}

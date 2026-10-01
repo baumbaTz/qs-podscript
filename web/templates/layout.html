@@ -1,0 +1,134 @@
+{{define "layout"}}<!doctype html>
+<html lang="en" data-look="{{.Look}}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{.Title}} – QS-PodScript</title>
+<script>try { var t = localStorage.getItem("qs-podscript-theme") || localStorage.getItem("podscribe-theme"); if (t === "light" || t === "dark") document.documentElement.dataset.theme = t; } catch (e) {}</script>
+<link rel="stylesheet" href="/static/app.css?v={{.Version}}">
+<script src="/static/app.js?v={{.Version}}" defer></script>
+</head>
+<body>
+<header class="top">
+  <div class="brandbox">
+    <a class="brand" href="{{.ContentBase}}/">QS-PodScript{{if and .ServerMode (not .Places)}} <span class="brand-server" title="These pages belong to the shared server">Server</span>{{end}}</a>
+    {{if .Places}}{{template "placemenu" .}}{{end}}
+  </div>
+  <div class="top-tools"><button type="button" class="theme-mini" id="themebtn2" hidden></button></div>
+  <nav>
+    <a href="{{.ContentBase}}/" {{if eq .Nav "home"}}aria-current="page"{{end}}>Podcasts</a>
+    <a href="{{.ContentBase}}/search" {{if eq .Nav "search"}}aria-current="page"{{end}}>Search</a>
+    {{if .ViaLocal}}<a href="{{.LocalBase}}/setup" title="The settings of your own computer">Setup</a>
+    <a href="{{.LocalBase}}/queue" title="What your computer works on">Queue</a>
+    {{else if .IsAdmin}}<a href="/setup" {{if eq .Nav "setup"}}aria-current="page"{{end}}>Setup{{if not .Setup.Ready}}{{if not .ServerMode}} <span class="dot" title="Setup needed"></span>{{end}}{{end}}</a>
+    <a href="/queue" {{if eq .Nav "queue"}}aria-current="page"{{end}}>Queue</a>{{end}}
+    {{if .LoggedIn}}<a href="{{.ContentBase}}/people" {{if eq .Nav "people"}}aria-current="page"{{end}}>People</a>{{end}}
+    {{if .ViaLocal}}<a href="{{.LocalBase}}/log" title="What your computer did">Activity</a>
+    {{else if .IsAdmin}}<a href="/log" {{if eq .Nav "log"}}aria-current="page"{{end}}>Activity</a>{{end}}
+    {{if and .ServerMode .IsAdmin}}<a href="/users" {{if eq .Nav "users"}}aria-current="page"{{end}}>Users</a>
+    {{else if and .ServerAdmin .ContentBase}}<a href="{{.ContentBase}}/users" title="The server's users">Users</a>{{end}}
+    <a href="/help" {{if eq .Nav "help"}}aria-current="page"{{end}}>Help</a>
+  </nav>
+  {{if .ViaLocal}}{{template "localjob" .}}{{else if .IsAdmin}}{{if and .Helpers (eq .Status.Job "")}}{{template "helpers" .}}{{else}}{{template "job" .}}{{end}}{{else}}<div class="job"></div>{{end}}
+  {{if and .ServerMode (not .ViaLocal)}}<div class="account">{{with .User}}<a class="who-am-i" href="/account" title="Your account: password, computers, what you did">{{.Name}}</a>
+    <form method="post" action="/logout" class="inline"><button type="submit" class="quiet small">Log out</button></form>
+    {{else}}<a class="button quiet small" href="/login">Log in</a>{{end}}</div>{{end}}
+</header>
+{{if and .ViaLocal (not .Places)}}<div class="via-local"><b>Shared server</b>{{with $.User}} – you are logged in as <b>{{.Name}}</b>{{end}}. Everything on these pages happens on the server. <a href="{{.ViaLocal}}">← Back to your own QS-PodScript</a></div>{{end}}
+{{if .LocalVersion}}<div class="version-warn" role="status">Your computer runs QS-PodScript <b>{{.LocalVersion}}</b>, this server runs <b>{{.Version}}</b>. Different versions may not work well together – please update {{if versionOlder .LocalVersion .Version}}your computer{{else}}the server{{end}}.</div>{{end}}
+{{if .ServerVersion}}<div class="version-warn" role="status">The server you work on runs QS-PodScript <b>{{.ServerVersion}}</b>, this computer runs <b>{{.Version}}</b>. Different versions may not work well together – please update {{if versionOlder .Version .ServerVersion}}this computer{{else}}the server{{end}}.</div>{{end}}
+<main>
+  {{if .Msg}}<p class="flash ok" role="status">{{.Msg}}</p>{{end}}
+  {{if .Err}}<p class="flash err" role="alert">{{.Err}}</p>{{end}}
+  {{template "content" .}}
+</main>
+<nav class="pagenav themenav" id="themenav" aria-label="Colours" hidden>
+  <button type="button" id="themebtn"></button>
+</nav>
+<nav class="pagenav" id="pagenav" aria-label="Scroll the page" hidden>
+  <button type="button" data-go="top" title="To the top" aria-label="Scroll to the top">⤒</button>
+  <button type="button" data-go="up" title="One page up" aria-label="Scroll up one page">↑</button>
+  <button type="button" data-go="now" title="To the part that is playing" aria-label="Scroll to the part that is playing" hidden>◉</button>
+  <button type="button" data-go="down" title="One page down" aria-label="Scroll down one page">↓</button>
+  <button type="button" data-go="bottom" title="To the bottom" aria-label="Scroll to the bottom">⤓</button>
+</nav>
+</body>
+</html>{{end}}
+
+{{define "placemenu"}}
+<details class="placemenu">
+  <summary class="place-badge {{if .OnServer}}on-server{{else}}on-local{{end}}" title="Where you work – click to switch">{{if .OnServer}}Server<span class="place-sep">·</span>{{end}}{{.PlaceName}}<span class="caret" aria-hidden="true">▾</span></summary>
+  <div class="place-pop">
+    <p class="place-head">Where you work</p>
+    {{range .Places}}<form method="post" action="{{$.SwitchURL}}">
+      <input type="hidden" name="place" value="{{.ID}}">
+      <button type="submit" class="place-opt"{{if .Active}} aria-current="true" disabled{{end}}>{{if .Active}}✓ {{end}}{{.Name}}{{if eq .ID 0}} <small>your own podcasts</small>{{end}}</button>
+    </form>{{end}}
+    {{if and .ViaLocal .User}}<p class="place-who">Logged in as <b>{{.User.Name}}</b></p>{{end}}
+    <a class="place-manage" href="{{.LocalBase}}/setup#places">Manage servers…</a>
+  </div>
+</details>
+{{end}}
+
+{{define "helpers"}}
+<div class="job helpers">
+  <div class="job-line">
+    <span class="job-state">Helpers' computers</span>
+    <span class="job-stage">{{.Helpers.Working}} working · {{.Helpers.Waiting}} waiting</span>
+  </div>
+  <div class="job-actions"><a class="button quiet" href="/work" title="What the helpers are working on and what is waiting">Helpers' work</a></div>
+</div>
+{{end}}
+
+{{define "localjob"}}
+<!-- server page opened through the local app: shows what YOUR computer is doing (live via /_local/events) -->
+<div class="job local-job" id="job" data-job="" data-done="0" data-events="/_local/events" data-local="1" data-server="{{.ActiveServer}}">
+  <div class="job-line">
+    <span class="job-who">Your computer:</span>
+    <span class="job-state" id="job-state">…</span>
+    <span class="job-stage" id="job-stage"></span>
+  </div>
+  <a class="job-ep" id="job-ep"></a>
+  <div class="meter" id="job-meter" hidden><span id="job-bar" style="width:100%"></span></div>
+  <p class="job-err" id="job-err" hidden></p>
+  <div class="job-actions">
+    <form method="post" action="/_local/queue/start" id="job-start" hidden>
+      <input type="hidden" name="return" value="{{.Here}}">
+      <button type="submit" title="Your own podcasts first, then work for the server">Start transcribing</button>
+    </form>
+    <form method="post" action="/_local/queue/stop" id="job-stop" hidden>
+      <input type="hidden" name="return" value="{{.Here}}">
+      <button type="submit" id="job-stop-soft" title="Finishes the current episode first">Stop after this episode</button>
+      <button type="submit" name="now" value="1" class="quiet" title="Stops at once">Stop now</button>
+    </form>
+  </div>
+</div>
+{{end}}
+
+{{define "job"}}
+<div class="job" id="job" data-job="{{.Status.Job}}" data-done="{{.Status.DoneCount}}">
+  <div class="job-line">
+    <span class="job-state" id="job-state">{{if eq .Status.Job ""}}Idle{{else if eq .Status.Job "setup"}}Installing{{else}}Transcribing{{end}}</span>
+    <span class="job-stage" id="job-stage">{{.Status.Stage}}</span>
+  </div>
+  <a class="job-ep" id="job-ep" href="{{if .Status.EpisodeID}}/episodes/{{.Status.EpisodeID}}{{end}}">{{.Status.EpisodeTitle}}</a>
+  <div class="meter" id="job-meter" {{if eq .Status.Job ""}}hidden{{end}}><span id="job-bar" style="width:{{if ge .Status.Pct 0}}{{.Status.Pct}}{{else}}100{{end}}%" class="{{if lt .Status.Pct 0}}busy{{end}}"></span></div>
+  <p class="job-err" id="job-err" {{if not .Status.LastError}}hidden{{end}}>{{.Status.LastError}}</p>
+  <div class="job-actions">
+    <form method="post" action="/queue/start" id="job-start" {{if ne .Status.Job ""}}hidden{{end}}>
+      <button type="submit" {{if not .Setup.Ready}}disabled title="Finish the setup first"{{end}}>Start transcribing</button>
+    </form>
+    <form method="post" action="/queue/stop" id="job-stop" {{if eq .Status.Job ""}}hidden{{end}}>
+      <button type="submit" id="job-stop-soft" {{if or .Status.Stopping (eq .Status.Job "setup")}}hidden{{end}} title="Finishes the current episode first">Stop after this episode</button>
+      <button type="submit" name="now" value="1" class="quiet">{{if eq .Status.Job "setup"}}Cancel{{else}}Stop now{{end}}</button>
+    </form>
+  </div>
+</div>
+{{end}}
+
+{{define "langs"}}
+<datalist id="langs">
+  <option value="auto"><option value="en"><option value="de"><option value="es"><option value="fr">
+  <option value="it"><option value="nl"><option value="pt"><option value="pl"><option value="sv">
+</datalist>
+{{end}}

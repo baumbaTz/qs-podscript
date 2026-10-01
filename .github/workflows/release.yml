@@ -1,0 +1,117 @@
+# Release: push a tag like v0.29.0 (it must match "const version" in main.go).
+# Builds Linux, Windows and macOS packages plus the source zip, and publishes
+# them as a GitHub release with the matching section of DONE.md as notes.
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:   # manual run: builds everything, uploads as workflow artifacts only
+
+permissions:
+  contents: write
+
+env:
+  # Windows Vulkan build of whisper-cli.exe (see third_party/whisper-vulkan-win64/BUILD.md),
+  # uploaded once as an asset of the release "deps-whisper-vulkan-1.9.2" (docs/RELEASING.md)
+  VULKAN_WHISPER_URL: https://github.com/${{ github.repository }}/releases/download/deps-whisper-vulkan-1.9.2/whisper-cli.exe
+  VULKAN_WHISPER_SHA256: 781212e268e643ad8cf4a750dfce7dba4fc54c0cf791891ab44eac6fd8115864
+
+jobs:
+  check:
+    runs-on: ubuntu-22.04
+    outputs:
+      version: ${{ steps.v.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: v
+        name: Version from main.go
+        run: |
+          V=$(grep 'const version' main.go | cut -d'"' -f2)
+          echo "version=$V" >> "$GITHUB_OUTPUT"
+          if [ "${GITHUB_REF_TYPE}" = "tag" ] && [ "${GITHUB_REF_NAME}" != "v$V" ]; then
+            echo "::error::tag ${GITHUB_REF_NAME} does not match version $V in main.go"
+            exit 1
+          fi
+
+  linux-windows:
+    needs: check
+    runs-on: ubuntu-22.04   # glibc 2.35: runs on Ubuntu 22.04+, Debian 12+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - name: Tests
+        run: go test -tags sqlite_fts5 ./...
+      - name: MinGW + zip
+        run: sudo apt-get update && sudo apt-get install -y gcc-mingw-w64-x86-64 g++-mingw-w64-x86-64 zip
+      - name: Windows Vulkan whisper-cli.exe
+        run: |
+          mkdir -p third_party/whisper-vulkan-win64
+          if curl -fsSL -o third_party/whisper-vulkan-win64/whisper-cli.exe "$VULKAN_WHISPER_URL"; then
+            echo "$VULKAN_WHISPER_SHA256  third_party/whisper-vulkan-win64/whisper-cli.exe" | sha256sum -c -
+          else
+            echo "::warning::Vulkan whisper-cli.exe not found at $VULKAN_WHISPER_URL - the Windows package is built without Vulkan (see docs/RELEASING.md)"
+            rm -f third_party/whisper-vulkan-win64/whisper-cli.exe
+          fi
+      - name: Build
+        run: ./build.sh
+      - name: Source zip
+        run: |
+          V=${{ needs.check.outputs.version }}
+          git archive --format=zip --prefix=qs-podscript-$V/ -o dist/qs-podscript-$V-src.zip HEAD
+      - uses: actions/upload-artifact@v4
+        with:
+          name: linux-windows
+          path: |
+            dist/qs-podscript-*-linux-x64.tar.gz
+            dist/qs-podscript-*-windows-x64.zip
+            dist/qs-podscript-*-src.zip
+          if-no-files-found: error
+
+  macos:
+    needs: check
+    runs-on: macos-14   # Apple Silicon
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - name: Tests
+        run: go test -tags sqlite_fts5 ./...
+      - name: Build
+        run: ./build-macos.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: macos
+          path: dist/qs-podscript-*-macos-arm64.zip
+          if-no-files-found: error
+
+  publish:
+    if: github.ref_type == 'tag'
+    needs: [check, linux-windows, macos]
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          path: out
+          merge-multiple: true
+      - name: Release notes from DONE.md
+        run: |
+          V=${{ needs.check.outputs.version }}
+          # the section "## <date> – v<V> – ..." up to the next "## "
+          awk -v v="v$V" '
+            /^## / { if (inside) exit; if (index($0, v " ") || $0 ~ v"$") { inside=1 } }
+            inside { print }
+          ' DONE.md > notes.md
+          if [ ! -s notes.md ]; then echo "Release $V" > notes.md; fi
+          printf '\n---\n**Downloads:** Linux (x64, tar.gz), Windows (x64, zip), macOS (Apple Silicon, zip – new, untested), source.\nInstall notes: README.txt inside each package. Checksums: SHA256SUMS.txt\n' >> notes.md
+          (cd out && sha256sum * > SHA256SUMS.txt)
+          cat notes.md
+      - uses: softprops/action-gh-release@v2
+        with:
+          name: QS-PodScript ${{ needs.check.outputs.version }}
+          body_path: notes.md
+          files: out/*

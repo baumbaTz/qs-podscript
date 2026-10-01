@@ -1,0 +1,80 @@
+{{define "content"}}
+{{if and .IsAdmin (not .Setup.Ready)}}
+<section class="panel notice">
+  <h1>One-time setup first</h1>
+  <p>QS-PodScript needs to download its transcription tools and models once – about 2.5 GB. After that everything runs on this computer.</p>
+  <p><a class="button" href="/setup">Open setup</a></p>
+</section>
+{{end}}
+
+{{if not .ServerMode}}<h1 class="page-title">Podcasts</h1>{{end}}
+<form method="get" action="/search" class="searchform home-search" role="search">
+  <div class="search-row">
+    <label class="sr" for="hq">Search the transcripts</label>
+    <input type="search" id="hq" name="q" placeholder="Search everything that was said …">
+    <button type="submit">Search</button>
+  </div>
+</form>
+
+<section{{if not .ServerMode}} class="panel home-box"{{end}}>
+  <div class="head-row">
+    <div>
+      {{if .ServerMode}}<h1>Podcasts</h1>{{else}}<h2>On this computer</h2>
+      <p class="sub">Your own podcasts, transcribed here.</p>{{end}}
+    </div>
+    {{if .IsAdmin}}<a class="button" href="/feeds/new"{{if not .ServerMode}} title="Adds a podcast to this computer"{{end}}>Add a podcast</a>{{end}}
+  </div>
+  {{with .Data.Feeds}}
+  <ul class="feeds">
+    {{range .}}
+    <li class="feed-row">
+      <a class="art-link" href="/feeds/{{.ID}}" tabindex="-1" aria-hidden="true">{{with .ImageURL}}<img class="art art-m" src="{{.}}" alt="" loading="lazy">{{else}}<span class="art art-m art-none"></span>{{end}}</a>
+      <div class="feed-main">
+      <a class="feed-title" href="/feeds/{{.ID}}">{{.Title}}</a>
+      <div class="progress-line">
+        <div class="meter small"><span style="width:{{if .Total}}{{printf "%.1f" (pctOf .Done .Total)}}{{else}}0{{end}}%"></span></div>
+        <span>{{.Done}} of {{.Total}} transcribed{{if .Failed}}, <a href="/feeds/{{.ID}}?show=failed">{{.Failed}} failed</a>{{end}}</span>
+      </div>
+      </div>
+    </li>
+    {{end}}
+  </ul>
+  {{else}}
+  <p class="empty">No podcasts yet. Add one with its feed address – you find it on the podcast's website or in your podcast app under "share" or "copy feed URL".</p>
+  {{end}}
+</section>
+
+{{with .Data.Servers}}
+<section class="panel home-box servers-list">
+  <div class="head-row">
+    <div>
+      <h2>Your servers</h2>
+      <p class="sub">Shared QS-PodScripts you help with – switch to one to work on its podcasts.</p>
+    </div>
+    <a class="button quiet" href="/setup#places">Manage servers</a>
+  </div>
+  <ul class="feeds">
+    {{range .}}
+    <li class="feed-row">
+      <span class="art art-m art-server" aria-hidden="true">⇄</span>
+      <div class="feed-main">
+        <span class="feed-title">{{.Label}}</span>
+        <div class="progress-line"><span>{{if .Name}}{{.Host}} · {{end}}logged in as {{.User}}{{if .Work}} · this computer transcribes for it{{end}}</span></div>
+      </div>
+      <form method="post" action="/switch" class="inline"><input type="hidden" name="place" value="{{.ID}}"><button type="submit" class="quiet">Switch to it</button></form>
+    </li>
+    {{end}}
+  </ul>
+  <p class="sub narrow home-box-foot">You stay on a server until you switch back – also with the menu next to the name at the top.</p>
+</section>
+{{end}}
+
+{{if .IsAdmin}}{{with .Data.Log}}
+<section>
+  <div class="head-row"><h2>Recent activity</h2><a href="/log">Full log</a></div>
+  <pre class="log short">{{range .}}{{.}}
+{{end}}</pre>
+</section>
+{{end}}
+{{end}}
+{{end}}

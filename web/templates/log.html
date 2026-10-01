@@ -1,0 +1,18 @@
+{{define "content"}}
+<div class="head-row"><h1>Activity</h1></div>
+{{if .ViaLocal}}
+<nav class="tabs" aria-label="Whose activity">
+  <a href="{{.LocalBase}}/log">This computer</a>
+  <a href="/log" aria-current="page">Server{{with .PlaceName}}: {{.}}{{end}}</a>
+</nav>
+<p class="tab-note">What happened on the <b>shared server</b>: helpers' results, imports, logins and errors.</p>
+{{else if and (not .ServerMode) .Data.ActiveServer .ContentBase}}{{if .Data.ActiveServer.IsAdmin}}
+<nav class="tabs" aria-label="Whose activity">
+  <a href="/log" aria-current="page">This computer</a>
+  <a href="{{.ContentBase}}/log">Server: {{.Data.ActiveServer.Label}}</a>
+</nav>
+{{end}}{{end}}
+<p class="sub">{{if .ServerMode}}The server's{{else}}This computer's{{end}} complete log is saved in <code>{{.Data.Path}}</code> – send that file when something goes wrong.</p>
+<pre class="log" id="log" data-live>{{range .Data.Lines}}{{.}}
+{{end}}</pre>
+{{end}}

@@ -1,0 +1,52 @@
+{{define "content"}}
+{{$d := .Data}}
+<h1>Queue</h1>
+<p class="sub narrow">{{if $d.HelpersOnly}}This server doesn't transcribe itself: these episodes wait for the helpers' computers, in this order.{{else}}“Start transcribing” works through these episodes from the top.{{end}} Newly found episodes join by date (oldest first). Taking an episode out doesn't delete anything – it stays on its podcast page as “Not queued” and can be put back any time.</p>
+
+{{with $d.Now}}{{if .EpisodeTitle}}<section class="panel now-playing"><b>Now:</b> {{.EpisodeTitle}} <span class="sub">– {{.Stage}}</span></section>{{end}}{{end}}
+
+{{with $d.ServerAsks}}
+<section class="panel asks">
+  <h2>Asked for on a server</h2>
+  <p class="sub">Clicked on server pages: your computer does these before the list below – right after the current work if it is busy, and first when you press “Start transcribing”. A whole podcast stays here until none of its episodes are waiting.</p>
+  <ol>
+  {{range .}}
+    <li>{{if .Link}}<a href="{{.Link}}">{{or .Title (printf "Server %s" .Path)}}</a>{{else}}{{or .Title (printf "Server %s" .Path)}}{{end}} – {{.What}}{{with .Where}} <span class="sub">({{.}})</span>{{end}}
+      <form method="post" action="/queue/asks/drop" class="inline"><input type="hidden" name="id" value="{{.ID}}"><input type="hidden" name="srv" value="{{.SrvID}}"><button type="submit" class="quiet small" title="Your computer won't do it; it stays in line for the other helpers">Take off</button></form></li>
+  {{end}}
+  </ol>
+</section>
+{{end}}
+
+{{if $d.Rows}}
+<p class="sub narrow drag-hint" hidden>Drag an episode by its handle <span aria-hidden="true">⠿</span> to move it.</p>
+<table class="episodes queue" data-sortable>
+  <thead><tr><th class="grip"><span class="sr">Move</span></th><th class="num">#</th><th>Episode</th><th class="q-podcast">Podcast</th><th class="q-date">Date</th><th><span class="sr">Actions</span></th></tr></thead>
+  <tbody>
+  {{range $d.Rows}}
+    <tr data-id="{{.EpisodeID}}">
+      <td class="grip"><span class="drag-handle" title="Hold and drag to move">⠿</span></td>
+      <td class="num">{{.Pos}}</td>
+      <td>{{if .Redo}}<a href="/episodes/{{.EpisodeID}}">{{.Title}}</a>{{else}}{{.Title}}{{end}}
+        {{with queueWhy .}}<span class="tag-soft">{{.}}</span>{{end}}{{with queueRank .}} <small class="sub">{{.}}</small>{{end}}
+        <small class="sub q-sub">{{.Podcast}} · {{date .PubDate}}</small></td>
+      <td class="q-podcast"><a href="/feeds/{{.FeedID}}">{{.Podcast}}</a></td>
+      <td class="date q-date">{{date .PubDate}}</td>
+      <td class="act row-actions">
+        {{if ne .Pos 1}}<form method="post" action="/queue/{{.EpisodeID}}/top" class="inline"><button type="submit" class="quiet small" title="Next in line" aria-label="To the top"><span class="ico" aria-hidden="true">⤒</span><span class="lbl">To the top</span></button></form>{{end}}
+        <form method="post" action="/queue/{{.EpisodeID}}/end" class="inline"><button type="submit" class="quiet small" title="After all others" aria-label="To the end"><span class="ico" aria-hidden="true">⤓</span><span class="lbl">To the end</span></button></form>
+        <form method="post" action="/queue/{{.EpisodeID}}/remove" class="inline"><button type="submit" class="quiet small" title="{{if .Redo}}Keeps the current version{{else}}Stays on the podcast page as “Not queued”{{end}}" aria-label="Take out"><span class="ico" aria-hidden="true">✕</span><span class="lbl">Take out</span></button></form>
+      </td>
+    </tr>
+  {{end}}
+  </tbody>
+</table>
+{{if gt $d.Total (len $d.Rows)}}<p class="sub">Showing the first {{len $d.Rows}} of {{$d.Total}}. <a href="/queue?all=1">Show all</a></p>{{end}}
+{{else}}<p class="empty">The queue is empty.</p>{{end}}
+
+{{if $d.Skipped}}
+<form method="post" action="/queue/0/restore" class="inline">
+  <p class="sub">{{$d.Skipped}} episode{{if ne $d.Skipped 1}}s are{{else}} is{{end}} taken out of the queue. <button type="submit" class="quiet small">Put all back</button></p>
+</form>
+{{end}}
+{{end}}

@@ -1,0 +1,17 @@
+# build output
+/dist/
+/qs-podscript
+/qs-podscript.exe
+*.test
+
+# local data (models, tools, database, audio) - never commit
+/data/
+
+# big binary, published as a release asset instead (docs/RELEASING.md)
+/third_party/whisper-vulkan-win64/whisper-cli.exe
+
+# dev leftovers
+/_truth.txt
+*.tmp
+.DS_Store
+/.wav

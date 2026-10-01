@@ -1,0 +1,26 @@
+{{define "content"}}
+<div class="head-row"><h1>People</h1></div>
+<p class="sub narrow">Everyone QS-PodScript can recognize, across all podcasts. A person gets voice samples when you name a voice or assign a passage to them on an episode page. The more confirmed samples – from different episodes and years – the more reliable the recognition.</p>
+
+{{with .Data.People}}
+<table class="episodes people">
+  <thead><tr><th>Name</th><th>Voice samples</th><th>Podcasts</th></tr></thead>
+  <tbody>
+  {{range .}}
+    <tr>
+      <td><a href="/people/{{.ID}}">{{.Name}}</a></td>
+      <td>{{if .Samples}}{{.Samples}} ({{secs .Seconds}}){{else}}<span class="sub">none yet</span>{{end}}</td>
+      <td>{{range $i, $f := .Feeds}}{{if $i}}, {{end}}{{$f}}{{end}}</td>
+    </tr>
+  {{end}}
+  </tbody>
+</table>
+{{else}}
+<p class="empty">Nobody yet. Add people here, on a podcast's page, or directly while correcting a transcript.</p>
+{{end}}
+
+{{if .IsAdmin}}<form method="post" action="/people" class="form inline-form">
+  <label>Add a person <input name="name" required placeholder="Name"></label>
+  <button type="submit">Add</button>
+</form>{{end}}
+{{end}}

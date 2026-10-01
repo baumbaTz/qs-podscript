@@ -1,0 +1,222 @@
+{{define "content"}}
+<h1>Setup{{if and .ServerMode (not .ViaLocal)}} of the server{{end}}</h1>
+{{if .ViaLocal}}
+<nav class="tabs" aria-label="Whose settings">
+  <a href="{{.LocalBase}}/setup">This computer</a>
+  <a href="/setup" aria-current="page">Server{{with .PlaceName}}: {{.}}{{end}}</a>
+</nav>
+<p class="tab-note">Settings of the <b>shared server</b>: the speaker detection every helper uses for server episodes, who transcribes, import and export. Changes here affect everybody.</p>
+{{else if and (not .ServerMode) .Data.ActiveServer .ContentBase}}{{if .Data.ActiveServer.IsAdmin}}
+<nav class="tabs" aria-label="Whose settings">
+  <a href="/setup" aria-current="page">This computer</a>
+  <a href="{{.ContentBase}}/setup">Server: {{.Data.ActiveServer.Label}}</a>
+</nav>
+{{end}}{{end}}
+<nav class="jump" aria-label="Sections">
+  {{if not .ServerMode}}<a href="#places">Where you work</a>{{end}}
+  <a href="#install">Programs and models</a>
+  <a href="#transcription">Transcription</a>
+  <a href="#speakers">Speaker detection</a>
+  {{if .ServerMode}}<a href="#server-work">Who transcribes</a>{{end}}
+  <a href="#look">Look</a>
+  <a href="#move">{{if .ServerMode}}Export and import{{else}}Moving to another computer{{end}}</a>
+</nav>
+
+{{if not .ServerMode}}
+<section class="setup-sec" id="places">
+<h2 class="section-title">Where you work</h2>
+<p class="sub narrow">Your own podcasts live on this computer. Servers are shared QS-PodScripts you help with. Switch to one to work on its podcasts: then <i>Podcasts</i>, <i>Search</i> and <i>People</i> show that server until you switch back – Setup, Queue and Activity always stay this computer's. The menu next to the name at the top switches too.</p>
+<table class="places">
+  <tbody>
+    <tr class="{{if eq .Data.Active 0}}is-active{{end}}">
+      <td><b>This computer</b><br><small class="sub">your own podcasts</small></td>
+      <td></td>
+      <td class="row-actions">{{if eq .Data.Active 0}}<span class="tag">Active</span>{{else}}<form method="post" action="/switch" class="inline"><input type="hidden" name="place" value="0"><button type="submit" class="quiet small">Switch here</button></form>{{end}}</td>
+    </tr>
+    {{range .Data.Servers}}
+    <tr class="{{if eq .ID $.Data.Active}}is-active{{end}}">
+      <td><b>{{.Label}}</b>{{if .Name}} <small class="sub">{{.Host}}</small>{{end}}<br><small class="sub">logged in as {{.User}}{{if eq .Admin "1"}} (admin){{end}}</small>
+        <details class="rename"><summary>Rename</summary>
+          <form method="post" action="/remote/{{.ID}}/rename" class="inline-form"><input name="name" value="{{.Name}}" placeholder="{{.Host}}" maxlength="60" aria-label="Name"><button type="submit" class="quiet small">Save</button></form>
+        </details>
+      </td>
+      <td>
+        <form method="post" action="/remote/{{.ID}}/work" class="inline">
+          <input type="hidden" name="work" value="{{if .Work}}0{{else}}1{{end}}">
+          <button type="submit" class="switch" role="switch" aria-checked="{{if .Work}}true{{else}}false{{end}}" title="When you press “Start transcribing”: after your own queue, also do this server's waiting episodes"><span class="track" aria-hidden="true"></span>Transcribe for this server</button>
+        </form>
+      </td>
+      <td class="row-actions">
+        {{if eq .ID $.Data.Active}}<span class="tag">Active</span>{{else}}<form method="post" action="/switch" class="inline"><input type="hidden" name="place" value="{{.ID}}"><button type="submit" class="quiet small">Switch to it</button></form>{{end}}
+        <details class="danger inline-details"><summary>Remove</summary>
+          <form method="post" action="/remote/{{.ID}}/disconnect" class="inline"><button type="submit" class="danger small">Remove {{.Label}}</button></form>
+        </details>
+      </td>
+    </tr>
+    {{end}}
+  </tbody>
+</table>
+<p class="sub narrow">“Transcribe for this server”: when you press <i>Start transcribing</i>, this computer does your own queue first, then the waiting episodes of every ticked server, taking turns. Clicking <i>Transcribe again</i> or <i>Redo speaker detection</i> on a server page always has this computer do that one episode. Nothing starts by itself.</p>
+<details class="panel settings" {{if not .Data.Servers}}open{{end}}>
+  <summary>Add a server</summary>
+  <p class="sub narrow">Your password is only used to log in once; this computer gets its own key, which an admin can revoke. Adding a server you already have renews its key.</p>
+  <form method="post" action="/remote/connect" class="form">
+    <label>Server address <input name="url" required placeholder="https://podscript.example.org"></label>
+    <label>Your name on the server <input name="name" required autocomplete="username"></label>
+    <label>Password <input type="password" name="password" required autocomplete="current-password"></label>
+    <label>Name for it here <input name="label" maxlength="60" placeholder="optional, e.g. Film Sack server"></label>
+    <button type="submit">Connect</button>
+  </form>
+</details>
+</section>
+{{end}}
+
+<section class="setup-sec" id="install">
+<h2 class="section-title">Programs and models</h2>
+{{$s := .Setup}}
+<section class="panel">
+  <ul class="checks">
+    <li class="{{if $s.FFmpegOK}}ok{{else}}missing{{end}}">Audio converter (ffmpeg)</li>
+    <li class="{{if $s.WhisperOK}}ok{{else}}missing{{end}}">Transcription engine (whisper.cpp){{if $s.WhisperOK}} – {{if eq $s.Backend "cuda"}}graphics card version (CUDA){{else if eq $s.Backend "vulkan"}}graphics card version (Vulkan){{else if eq $s.Backend "metal"}}Apple GPU version (Metal, from Homebrew){{else}}processor version{{end}}{{end}}</li>
+    <li class="{{if $s.ModelOK}}ok{{else}}missing{{end}}">Speech model: {{$s.Model}}</li>
+    <li class="{{if $s.DiarOK}}ok{{else}}missing{{end}}">Speaker detection models</li>
+    <li class="{{if or $s.GPU (ne $s.Backend "cpu")}}ok{{else}}info{{end}}">{{if $s.GPU}}Graphics card: {{$s.GPU}}{{else if ne $s.Backend "cpu"}}Graphics card in use ({{$s.Backend}}){{else}}No usable graphics card – transcription runs on the processor (much slower){{end}}</li>
+    {{if $s.Check}}<li class="{{if eq $s.Check "ok"}}ok{{else}}missing{{end}}">Last self-check: {{if eq $s.Check "ok"}}passed{{else}}failed – see <a href="/log">Activity</a>{{end}}</li>{{end}}
+  </ul>
+</section>
+
+<form method="post" action="/setup" class="form">
+  <fieldset>
+    <legend>Speech model</legend>
+    {{range .Data.Models}}
+    <label class="radio"><input type="radio" name="model" value="{{.Key}}" {{if eq .Key $.Data.Current}}checked{{end}}> {{.Desc}}</label>
+    {{end}}
+  </fieldset>
+  <fieldset>
+    <legend>Graphics card</legend>
+    {{$g := .Data.GPUMode}}
+    <label class="radio"><input type="radio" name="gpu" value="auto" {{if eq $g "auto"}}checked{{end}}> Automatic – best available, tested; falls back if the graphics card doesn't work</label>
+    {{if .Data.Windows}}
+    <label class="radio"><input type="radio" name="gpu" value="cuda" {{if eq $g "cuda"}}checked{{end}}> NVIDIA (CUDA) – fastest on NVIDIA cards</label>
+    <label class="radio"><input type="radio" name="gpu" value="vulkan" {{if eq $g "vulkan"}}checked{{end}}> Vulkan – AMD Radeon, Intel Arc, also NVIDIA</label>
+    {{else if .Data.Mac}}
+    <small>On a Mac, whisper.cpp comes from Homebrew (<code>brew install whisper-cpp ffmpeg</code>) and uses the Apple GPU (Metal) by itself.</small>
+    {{else}}
+    <small>On Linux the graphics card versions are built by install.sh.</small>
+    {{end}}
+    <label class="radio"><input type="radio" name="gpu" value="cpu" {{if eq $g "cpu"}}checked{{end}}> Processor only</label>
+  </fieldset>
+  <label class="radio"><input type="checkbox" name="force" value="1"> Download the tools again (if something seems broken)</label>
+  <button type="submit" {{if ne .Status.Job ""}}disabled{{end}}>{{if $s.Ready}}Update installation{{else}}Install{{end}}</button>
+  <small>Progress is shown at the top of the page. You can close the browser meanwhile – the download continues as long as the QS-PodScript window stays open.</small>
+</form>
+
+</section>
+
+<section class="setup-sec" id="transcription">
+<h2 class="section-title">Transcription</h2>
+<p class="sub narrow">Whisper can skip passages or get stuck repeating a phrase in long episodes – mostly around crosstalk, music and movie clips.{{if not .Data.FlashAttn}} Flash attention is switched off on this computer (it produced garbage here).{{end}} Voice activity detection is set per podcast (Podcast settings).</p>
+<form method="post" action="/settings/transcription" class="form">
+  <label class="radio"><input type="checkbox" name="pieces" value="1" {{if .Data.WhisperChunks}}checked{{end}}> Transcribe in pieces – the episode is cut into pieces of up to 28 seconds at pauses and speaker changes, and each piece is transcribed on its own, so nothing can be skipped. Songs and music are included. Recommended.</label>
+  <label class="radio"><input type="checkbox" name="context" value="1" {{if .Data.WhisperContext}}checked{{end}}> Carry text from one 30-second window to the next (only without pieces; Whisper's default, but a main cause of loops and skipped passages – recommended: off)</label>
+  <button type="submit">Save transcription settings</button>
+</form>
+
+</section>
+
+<section class="setup-sec" id="speakers">
+<h2 class="section-title">Speaker detection</h2>
+<p class="sub narrow">Speed versus accuracy of telling voices apart. Changes apply to episodes transcribed from now on – use "Redo speaker detection" on one episode and compare its versions. Stored voiceprints always use the same model, so they stay comparable across episodes.</p>
+{{$d := .Data.Diarize}}
+<form method="post" action="/settings/speakers" class="form">
+  <fieldset>
+    <legend>Runs on</legend>
+    <p class="sub">Now: <b>{{.Data.DeviceNow}}</b></p>
+    <label class="radio"><input type="radio" name="device" value="auto" {{if ne .Data.Device "cpu"}}checked{{end}}> The graphics card when it works (NVIDIA), otherwise the CPU</label>
+    <label class="radio"><input type="radio" name="device" value="cpu" {{if eq .Data.Device "cpu"}}checked{{end}}> Always the CPU</label>
+    {{if not .Data.GPUInstalled}}<small>Graphics card support for speaker detection is an optional part of the Linux installer (NVIDIA only, about 1.3 GB download): <code>./install.sh --gpu-speakers</code></small>{{end}}
+  </fieldset>
+  <fieldset>
+    <legend>Voice model</legend>
+    <small>Each model measures “how different” two voices are on its own scale, so each has its own separation threshold (lower finds more separate voices). Time is on the CPU, compared with ResNet34 – on the graphics card all of them are much faster. Compare on the same episode with “Redo speaker detection” (episode page) or <code>qs-podscript speaker-bench &lt;audio file&gt;</code>.</small>
+    <table class="models">
+      <thead><tr><th>Model</th><th>Time</th><th>Threshold</th></tr></thead>
+      <tbody>
+      {{range .Data.DiarizeModels}}
+      <tr>
+        <td><label class="radio"><input type="radio" name="model" value="{{.Key}}" {{if eq .Key $d.Model}}checked{{end}}> {{.Label}}</label> <small class="sub">({{.SizeMB}} MB{{if not .Downloaded}}, downloaded when first used{{end}})</small></td>
+        <td class="num">{{.SpeedText}}</td>
+        <td><input name="threshold_{{.Key}}" value="{{printf "%g" .Threshold}}" size="4" inputmode="decimal" aria-label="Threshold for {{.Label}}" title="Default {{printf "%g" .Default}}"></td>
+      </tr>
+      {{end}}
+      </tbody>
+    </table>
+  </fieldset>
+  <fieldset>
+    <legend>Precision</legend>
+    {{range .Data.Steps}}
+    <label class="radio"><input type="radio" name="step" value="{{.Key}}" {{if eq .Key (printf "%g" $d.Step)}}checked{{end}}> {{.Desc}}</label>
+    {{end}}
+  </fieldset>
+  <label>Merge similar voices
+    <input name="voice_merge" value="{{printf "%g" .Data.VoiceMerge}}" size="5" inputmode="decimal">
+    <small>Experimental. After detection, voices whose voiceprints are at least this similar are joined (0 = off, the default). In tests only very high values (about 0.92) avoided merging different people, and then it merged little. Try it on a finished episode with "Merge similar voices" – it takes a second.</small>
+  </label>
+  <button type="submit">Save speaker settings</button>
+</form>
+
+</section>
+
+{{if .ServerMode}}
+<section class="setup-sec" id="server-work">
+<h2 class="section-title">Who transcribes</h2>
+<p class="sub narrow">By default this server doesn't transcribe anything itself: “Transcribe again”, “Redo speaker detection” and new episodes wait for the helpers' computers – every connected QS-PodScript with “Transcribe for the server” ticked takes one episode at a time, so several computers work in parallel. The speaker detection settings above are sent along with every episode.</p>
+<form method="post" action="/settings/server-work" class="form">
+  <label class="radio"><input type="checkbox" name="self" value="1" {{if .Data.SelfTranscribes}}checked{{end}}> This server transcribes too (only useful if it has its own graphics card – otherwise it is very slow and does one episode at a time)</label>
+  <button type="submit">Save</button>
+</form>
+</section>
+{{end}}
+
+<section class="setup-sec" id="look">
+<h2 class="section-title">Look</h2>
+<p class="sub narrow">{{if .ServerMode}}How the server's pages look for visitors. Helpers working through their own QS-PodScript see the look chosen there.{{else}}How QS-PodScript looks on this computer – also the server pages you open here.{{end}}</p>
+<form method="post" action="/settings/look" class="looks">
+  <label class="look-card look-classic"><input type="radio" name="look" value="classic" {{if eq .Look "classic"}}checked{{end}}>
+    <span class="look-swatch" aria-hidden="true"><i></i><i></i><i></i></span>
+    <b>Classic</b><small>Calm and plain; bright or dark (button at the bottom left).</small></label>
+  <label class="look-card look-qs"><input type="radio" name="look" value="quicksack" {{if eq .Look "quicksack"}}checked{{end}}>
+    <span class="look-swatch" aria-hidden="true"><i></i><i></i><i></i></span>
+    <b>QuickSack</b><small>Like quicksack.li: black, dark red, condensed headings. Always dark.</small></label>
+  <button type="submit">Use this look</button>
+</form>
+</section>
+
+<section class="setup-sec" id="move">
+<h2 class="section-title">Moving to another computer</h2>
+<p class="sub narrow">An export is one file with everything you did: podcasts, episodes, transcripts, corrections, people, voice samples, spelling fixes and the audio copies for listening. Speech models and tools are not included – the other computer downloads them during setup.</p>
+{{with .Data.PendingImport}}
+<div class="panel notice">
+  <p><b>An import is waiting.</b> {{.Podcasts}} podcast{{if ne .Podcasts 1}}s{{end}}, {{.Episodes}} transcribed episode{{if ne .Episodes 1}}s{{end}} (exported with QS-PodScript {{.Version}}). Close QS-PodScript and start it again to finish. Until then nothing has changed.</p>
+  <form method="post" action="/import/cancel" class="inline"><button type="submit" class="quiet small">Cancel the import</button></form>
+</div>
+{{end}}
+<div class="move-grid">
+  <section class="panel">
+    <h3>Export from this computer</h3>
+    <p class="sub">Downloads one .zip file. Large – mostly audio, about 11 MB per hour of episodes. You can keep working meanwhile.</p>
+    <p><a class="button" href="/export" download>Export everything</a></p>
+  </section>
+  <section class="panel danger-soft">
+    <h3>Import on this computer</h3>
+    <p class="sub">Replaces <b>all</b> podcasts, transcripts and people here with the ones from the export. The data currently here is not deleted: it is moved to a folder <code>before-import-…</code> inside the data folder. This computer's graphics card and speech model settings stay as they are.</p>
+    <form method="post" action="/import" enctype="multipart/form-data" class="form">
+      <label>Export file <input type="file" name="file" accept=".zip" required></label>
+      <label class="radio"><input type="checkbox" name="confirm" value="1" required> Replace the data on this computer with this export</label>
+      <button type="submit" class="danger">Import</button>
+      <small>After the upload, close QS-PodScript and start it again – the data is swapped at the start.</small>
+    </form>
+  </section>
+</div>
+</section>
+{{end}}
