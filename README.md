@@ -2,7 +2,7 @@
 
 **Podcast transcripts with speaker names – on your own computer, or shared by a group of volunteers.**
 
-`Made with AI - This will annoy people, i assume. But its the only way I was able to even get close to what i wanted.`
+`Made with AI - Its the only way I was able to even get close to what i wanted. Feel free to NOT use this. :)`
 
 Feel free to find this terribad and not use it.`
 
