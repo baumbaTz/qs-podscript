@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"net/http"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -135,9 +136,14 @@ func (s *Server) userID(r *http.Request) int64 {
 // ---------------------------------------------------------------- statistics
 
 type UserStats struct {
-	Transcribed    int   // episodes (versions) transcribed on their computers
+	Transcribed    int   // episodes transcribed on their computers (not counting redone speaker detection)
 	TranscribedSec int64 // audio length of those
-	CleanedEps     int   // episodes with corrections by them
+	Speakers       int   // speaker detection redone on their computers
+	BusySec        int64 // their computers' time for all of it
+	WhisperSec     int64 // ... of that: transcribing
+	DiarizeSec     int64 // ... speaker detection
+	Computers      []computerWork
+	CleanedEps     int // episodes with corrections by them
 	Corrections    int
 	Checks         int // passages checked in "Look Who's Talking"
 	LastActive     int64
@@ -145,9 +151,36 @@ type UserStats struct {
 
 func (s *Store) UserStats(userID int64) UserStats {
 	var st UserStats
+	work := s.computerWorkBy(userID)
 	var secs float64
-	s.db.QueryRow(`SELECT COUNT(*), COALESCE(SUM(audio_seconds),0) FROM versions WHERE transcribed_by=? AND status='done'`, userID).Scan(&st.Transcribed, &secs)
+	byDev := map[string]*computerWork{}
+	for _, w := range work {
+		if w.Kind == workTranscribe {
+			st.Transcribed++
+			secs += w.AudioSec
+		} else {
+			st.Speakers++
+		}
+		st.BusySec += w.BusySec
+		st.WhisperSec += w.WhisperSec
+		st.DiarizeSec += w.DiarizeSec
+		c := byDev[w.Device]
+		if c == nil {
+			c = &computerWork{Name: w.Device}
+			byDev[w.Device] = c
+		}
+		c.Jobs++
+		c.AudioSec += int64(w.AudioSec)
+		c.BusySec += w.BusySec
+		c.WhisperSec += w.WhisperSec
+		c.DiarizeSec += w.DiarizeSec
+		c.Last = max(c.Last, w.At)
+	}
 	st.TranscribedSec = int64(secs)
+	for _, c := range byDev {
+		st.Computers = append(st.Computers, *c)
+	}
+	sort.Slice(st.Computers, func(i, j int) bool { return st.Computers[i].BusySec > st.Computers[j].BusySec })
 	s.db.QueryRow(`SELECT COUNT(DISTINCT v.episode_id), COUNT(*) FROM corrections c JOIN versions v ON v.id=c.version_id
 		WHERE c.user_id=?`, userID).Scan(&st.CleanedEps, &st.Corrections)
 	s.db.QueryRow(`SELECT COALESCE(MAX(at),0) FROM user_activity WHERE user_id=?`, userID).Scan(&st.LastActive)
@@ -164,19 +197,119 @@ type userEpisode struct {
 	Device    string
 }
 
-func (s *Store) episodesTranscribedBy(userID int64, limit int) []userEpisode {
-	rows, err := s.db.Query(`SELECT e.id, e.title, f.title, v.created_at, v.transcribed_on
+// ---------------------------------------------------------------- computer time
+//
+// Each version keeps how long its steps took ("download 4s, whisper 6m12s,
+// diarize 49m3s, …"). The time goes to whoever's computer did the work: the
+// transcriber, or for redone speaker detection the helper that did it
+// (speakers_by, since 0.31.0 - older redone versions by helpers can't be
+// told apart and are left out).
+
+const (
+	workTranscribe = "transcribed"
+	workSpeakers   = "speakers"
+)
+
+type computerJob struct {
+	EpisodeID  int64
+	Title      string
+	Podcast    string
+	At         int64
+	Device     string
+	Kind       string // workTranscribe | workSpeakers
+	AudioSec   float64
+	BusySec    int64
+	WhisperSec int64
+	DiarizeSec int64
+}
+
+// Speed: "12×" = 12 minutes of audio per minute of work.
+func (j computerJob) Speed() string { return speedText(j.AudioSec, j.BusySec) }
+
+type computerWork struct {
+	Name                                      string
+	Jobs                                      int
+	AudioSec, BusySec, WhisperSec, DiarizeSec int64
+	Last                                      int64
+}
+
+func (c computerWork) Speed() string { return speedText(float64(c.AudioSec), c.BusySec) }
+
+func speedText(audio float64, busy int64) string {
+	if busy <= 0 || audio <= 0 {
+		return ""
+	}
+	x := audio / float64(busy)
+	if x >= 10 {
+		return fmt.Sprintf("%.0f×", x)
+	}
+	return fmt.Sprintf("%.1f×", x)
+}
+
+// timingSteps reads a version's timing text into seconds per step.
+func timingSteps(t string) (total, whisper, diarize int64) {
+	for _, part := range strings.Split(t, ",") {
+		f := strings.Fields(part)
+		if len(f) != 2 {
+			continue
+		}
+		d, err := time.ParseDuration(f[1])
+		if err != nil || d < 0 {
+			continue
+		}
+		sec := int64(d.Seconds() + 0.5)
+		switch f[0] {
+		case "download", "convert", "identify", "audio":
+		case "whisper":
+			whisper += sec
+		case "diarize":
+			diarize += sec
+		default:
+			continue
+		}
+		total += sec
+	}
+	return
+}
+
+// computerWorkBy: everything this user's computers did, newest first.
+func (s *Store) computerWorkBy(userID int64) []computerJob {
+	rows, err := s.db.Query(`SELECT e.id, e.title, f.title, v.created_at, v.transcribed_by, v.transcribed_on, v.speakers_by, v.speakers_on,
+			v.audio_seconds, v.timing
 		FROM versions v JOIN episodes e ON e.id=v.episode_id JOIN feeds f ON f.id=e.feed_id
-		WHERE v.transcribed_by=? AND v.status='done' ORDER BY v.created_at DESC LIMIT ?`, userID, limit)
+		WHERE (v.transcribed_by=? OR v.speakers_by=?) AND v.status='done' ORDER BY v.created_at DESC, v.id DESC`, userID, userID)
 	if err != nil {
 		return nil
 	}
 	defer rows.Close()
-	var out []userEpisode
+	var out []computerJob
 	for rows.Next() {
-		var u userEpisode
-		rows.Scan(&u.EpisodeID, &u.Title, &u.Podcast, &u.At, &u.Device)
-		out = append(out, u)
+		var j computerJob
+		var tBy, sBy int64
+		var tOn, sOn, timing string
+		if rows.Scan(&j.EpisodeID, &j.Title, &j.Podcast, &j.At, &tBy, &tOn, &sBy, &sOn, &j.AudioSec, &timing) != nil {
+			continue
+		}
+		redo := strings.HasPrefix(timing, "transcript from ")
+		switch {
+		case sBy != 0: // speakers by a helper
+			if sBy != userID {
+				continue
+			}
+			j.Kind, j.Device = workSpeakers, sOn
+		case redo:
+			if strings.Contains(timing, "speakers by ") {
+				continue // by a helper before 0.31.0: unknown whose
+			}
+			j.Kind, j.Device = workSpeakers, tOn
+		default:
+			j.Kind, j.Device = workTranscribe, tOn
+		}
+		if j.Device == "" {
+			j.Device = "(unnamed)"
+		}
+		j.BusySec, j.WhisperSec, j.DiarizeSec = timingSteps(timing)
+		out = append(out, j)
 	}
 	return out
 }
@@ -315,10 +448,10 @@ func (s *Server) renderRecord(w http.ResponseWriter, r *http.Request, u *User, o
 	}
 	s.render(w, r, "user", title, nav, map[string]any{
 		"U": u, "Own": own, "Stats": s.st.UserStats(u.ID),
-		"Transcribed": s.st.episodesTranscribedBy(u.ID, 200),
-		"Cleaned":     s.st.episodesCleanedBy(u.ID, 200),
-		"Tokens":      s.st.APITokens(u.ID),
-		"Activity":    s.st.Activity(u.ID, 100),
+		"Work":     firstN(s.st.computerWorkBy(u.ID), 200),
+		"Cleaned":  s.st.episodesCleanedBy(u.ID, 200),
+		"Tokens":   s.st.APITokens(u.ID),
+		"Activity": s.st.Activity(u.ID, 100),
 	})
 }
 
@@ -380,4 +513,11 @@ func (s *Server) handleTokenDelete(w http.ResponseWriter, r *http.Request) {
 	}
 	s.st.Audit(me.ID, actTokenRevoked, 0, 0, 0, fmt.Sprintf("key %d of user %d", tid, uid))
 	back(w, r, to, "The computer's key was removed. It has to connect again to help.", "")
+}
+
+func firstN[T any](s []T, n int) []T {
+	if len(s) > n {
+		return s[:n]
+	}
+	return s
 }

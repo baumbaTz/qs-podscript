@@ -6,7 +6,7 @@
 {{range .Data.Users}}{{$u := .}}
 <details class="panel" id="u{{.ID}}">
   <summary><b>{{.Name}}</b> <span class="tag-soft">{{if eq .Role "admin"}}admin{{else}}editor · {{len .Podcasts}} podcast{{if ne (len .Podcasts) 1}}s{{end}}{{end}}</span>
-    {{with index $.Data.Stats .ID}}<small class="sub">· {{.Transcribed}} transcribed · {{.CleanedEps}} cleaned up · last active {{ago .LastActive}}</small>{{end}}</summary>
+    {{with index $.Data.Stats .ID}}<small class="sub">· {{.Transcribed}} transcribed{{if .BusySec}} ({{hours .BusySec}} computer time){{end}} · {{.CleanedEps}} cleaned up · last active {{ago .LastActive}}</small>{{end}}</summary>
   <p><a href="/users/{{.ID}}">Full record: episodes, changes, computers →</a></p>
   <form method="post" action="/users/{{.ID}}" class="form">
     <label class="radio"><input type="checkbox" name="admin" value="1" {{if eq .Role "admin"}}checked{{end}} {{if and $me (eq $me.ID .ID)}}disabled{{end}}> Admin (may do everything)</label>

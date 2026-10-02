@@ -132,6 +132,12 @@ func TestMakeDemo(t *testing.T) {
 		st.db.Exec(`INSERT INTO checks(version_id,start_ms,end_ms,user_id,changed,created_at) VALUES(?,?,?,?,?,?)`, vid, 0, ms/2, 0, 1, time.Now().Unix())
 	}
 	st.db.Exec(`UPDATE episodes SET status='queued' WHERE active_version_id IS NULL AND title LIKE '%Tremors%'`)
+	// server mode: an admin "demo" (password "demo-password") whose computers did the work
+	if uid, err := st.AddUser("demo", "demo-password", "admin"); err == nil {
+		st.db.Exec(`UPDATE versions SET transcribed_by=?, transcribed_on=CASE WHEN id%2=1 THEN 'gaming-pc' ELSE 'laptop' END,
+			timing=CASE WHEN id%2=1 THEN 'download 3s, convert 1s, diarize 2m40s, whisper 1m5s, identify 1s, audio 2s'
+			ELSE 'download 4s, convert 1s, diarize 9m12s, whisper 6m30s, identify 1s, audio 3s' END`, uid)
+	}
 	// a second podcast for the list
 	f2, _ := st.AddFeed(Feed{URL: "https://example.org/retrogames/feed.xml", Title: "Retro Games Weekly", Language: "en"})
 	s2, _ := st.Sources(f2)

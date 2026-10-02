@@ -389,7 +389,8 @@ func storeDiarizeResult(ctx context.Context, st *Store, ep Episode, srcID int64,
 		return Version{}, fmt.Errorf("the audio length doesn't match (%.0fs instead of %.0fs)", res.AudioSeconds, src.AudioSeconds)
 	}
 	v := Version{EpisodeID: ep.ID, WhisperModel: src.WhisperModel, WhisperBackend: src.WhisperBackend, Language: src.Language,
-		AudioFile: src.AudioFile, TranscribedBy: src.TranscribedBy, TranscribedOn: src.TranscribedOn}
+		AudioFile: src.AudioFile, TranscribedBy: src.TranscribedBy, TranscribedOn: src.TranscribedOn,
+		SpeakersBy: userID, SpeakersOn: device}
 	if v.ID, err = st.CreateVersion(v); err != nil {
 		return v, err
 	}
