@@ -1,5 +1,46 @@
 # DONE
 
+## 2026-10-02 – v0.31.0 – computer time on the user pages
+- Account / user page: new box "computer time" (total, of that transcribing
+  and finding speakers) and a "Computer time" table per computer: episodes,
+  audio, busy time, transcribing, speakers, speed (minutes of audio per
+  minute of work), last job. The "Transcribed" list shows how long each
+  episode took and how fast. Users page: computer time next to each user.
+- Read from the step times every version already stores (download, convert,
+  whisper, diarize, identify) - no manual time tracking.
+- Speaker detection redone by a helper now counts for that helper and its
+  computer (new: versions.speakers_by / speakers_on, schema 19). It used to
+  be credited to whoever transcribed the episode. Older redone versions by
+  helpers can't be told apart and are left out of the times.
+- "Episodes transcribed" no longer counts redone speaker detection twice;
+  shown separately ("speakers redone for N").
+- Demo data: admin "demo" / "demo-password" with timings on two computers.
+
+## 2026-10-02 – v0.30.1 – context for each line, the quick menu is back
+- Voice page ("everything one voice said"): each line shows the two lines
+  before and after it (greyed, with their speakers and times) and a
+  "▶ Play with context" link that plays from the first to the last of them.
+- Clicking a name in the lanes opens the quick "Everything said by X is
+  actually:" menu again (as before 0.30.0), now with a link "Not sure?
+  Check line by line →" to the voice page. Without JS the name is that link.
+  The menu is narrow again for this (no text column).
+
+## 2026-10-02 – v0.30.0 – everything one voice said
+- Episode page: the names in the lanes ("Speaker 4", "Jordan Lee", …) link
+  to a new page with everything that voice said in this version, line by
+  line with the same name buttons as "Look Who's Talking Now": click a time
+  to hear just that line (playback stops at its end), pick the right person,
+  split a line by clicking a word, Save. All lines of the page count as
+  checked (✓ and green edge for lines already checked); 40 lines per page,
+  "Save and next page". Ads and movie clips are included, with their badge.
+- "All of them are …" on that page: name every line of the voice at once
+  (a person, another unnamed voice, several at once, nobody/music) or as a
+  new person - a merge correction (undoable in Corrections; for an unnamed
+  voice it also saves a voice sample). Replaces the old click-on-lane-name
+  merge menu (no JS needed now).
+- Server: only editors of the podcast see the links (same rights as the
+  other corrections).
+
 ## 2026-10-01 – v0.29.0 – GitHub, macOS, Yippee-Ki-Yay
 - "Look Who's Talking Now" is the normal headline (podcast page box, its
   page, episode line, stats). Only when no podcast has anything left to

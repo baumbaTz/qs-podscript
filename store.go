@@ -16,7 +16,7 @@ import (
 // The readable transcript is built at display time (see merge.go). That makes
 // relabeling speakers instant and lets us re-run only diarization later.
 
-const schemaVersion = 18
+const schemaVersion = 19
 
 var schema = []string{
 	`CREATE TABLE settings(
@@ -330,6 +330,18 @@ func (s *Store) migrate() error {
 			}
 		}
 	}
+	if v < 19 {
+		// speaker detection redone by a helper: whose computer did it (the
+		// transcript stays credited to transcribed_by)
+		for _, q := range []string{
+			`ALTER TABLE versions ADD COLUMN speakers_by INTEGER NOT NULL DEFAULT 0`,
+			`ALTER TABLE versions ADD COLUMN speakers_on TEXT NOT NULL DEFAULT ''`,
+		} {
+			if _, err := tx.Exec(q); err != nil {
+				return fmt.Errorf("%w\n%s", err, q)
+			}
+		}
+	}
 	if _, err := tx.Exec(fmt.Sprintf(`PRAGMA user_version = %d`, schemaVersion)); err != nil {
 		return err
 	}
@@ -629,11 +641,14 @@ type Version struct {
 	DiarizeInfo    string
 	TranscribedBy  int64  // server mode: user whose computer transcribed it (0 = here)
 	TranscribedOn  string // that computer's name
+	SpeakersBy     int64  // speaker detection redone by a helper: that user (0 = not / here)
+	SpeakersOn     string // and that computer
 }
 
 func (s *Store) CreateVersion(v Version) (int64, error) {
-	res, err := s.db.Exec(`INSERT INTO versions(episode_id,created_at,status,whisper_model,whisper_backend,language,transcribed_by,transcribed_on)
-		VALUES(?,?,?,?,?,?,?,?)`, v.EpisodeID, time.Now().Unix(), "running", v.WhisperModel, v.WhisperBackend, v.Language, v.TranscribedBy, v.TranscribedOn)
+	res, err := s.db.Exec(`INSERT INTO versions(episode_id,created_at,status,whisper_model,whisper_backend,language,transcribed_by,transcribed_on,speakers_by,speakers_on)
+		VALUES(?,?,?,?,?,?,?,?,?,?)`, v.EpisodeID, time.Now().Unix(), "running", v.WhisperModel, v.WhisperBackend, v.Language,
+		v.TranscribedBy, v.TranscribedOn, v.SpeakersBy, v.SpeakersOn)
 	if err != nil {
 		return 0, err
 	}

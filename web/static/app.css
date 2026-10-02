@@ -874,3 +874,26 @@ details.inline-details[open] { display: block; margin-top: .4rem; }
   .assign:has(.assign-text[hidden]) > .assign-mark { margin-top: 0; border-top: 0; padding-top: 0; }
   .assign textarea { min-height: 6.5rem; }
 }
+/* lane names link to the voice page */
+a.lane-name { text-decoration: none; }
+a.lane-name:hover { text-decoration: underline; }
+/* voice page */
+.voice-name { color: var(--c); }
+.voice-all { margin-top: 1rem; }
+.voice-all h2 { margin-top: 0; }
+.voice-all .inline-form { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; margin-top: .6rem; }
+.voice-all select, .voice-all input[name=name] { font: inherit; padding: .35rem .5rem; border: 1px solid var(--rule); border-radius: var(--r-sm); background: var(--panel); color: var(--ink); max-width: 100%; }
+.qrow.is-checked { border-left: 3px solid var(--ok); }
+.voice-link { display: inline-block; margin: -.2rem 0 .6rem; font-size: .88rem; }
+/* voice page: lines around each line, for context */
+.qrow .ctx { margin: 0 0 .15rem; font-size: .88rem; color: var(--ink-soft); line-height: 1.4; opacity: .85; }
+.qrow .ctx + .qtext { margin-top: .35rem; }
+.qrow .qtext + .ctx { margin-top: .35rem; }
+.ctx-time { font-size: .75rem; font-variant-numeric: tabular-nums; }
+.ctx-who { font-weight: 600; color: var(--c, var(--ink-soft)); margin-right: .2rem; }
+.ctx-actions { margin: .3rem 0 .5rem; font-size: .85rem; }
+/* "whole voice" popup: no text/mark column -> narrow again */
+@media (min-width: 761px) {
+  .assign:has(.assign-text[hidden]):has(.assign-mark[hidden]) { display: block; width: min(34rem, calc(100vw - 2rem)); }
+}
+table.episodes th.num, table.episodes td.num { text-align: right; white-space: nowrap; }

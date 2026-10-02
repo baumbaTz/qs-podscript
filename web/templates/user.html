@@ -5,7 +5,8 @@
 <p class="sub">{{if .Data.Own}}{{$u.Name}} · {{end}}{{if eq $u.Role "admin"}}admin{{else}}editor{{end}} · last active {{ago $st.LastActive}}</p>
 
 <div class="stat-row">
-  <div class="panel stat"><b>{{$st.Transcribed}}</b><span>episodes transcribed{{if $st.TranscribedSec}} ({{hours $st.TranscribedSec}} of audio){{end}}</span></div>
+  <div class="panel stat"><b>{{$st.Transcribed}}</b><span>episodes transcribed{{if $st.TranscribedSec}} ({{hours $st.TranscribedSec}} of audio){{end}}{{if $st.Speakers}}, speakers redone for {{$st.Speakers}}{{end}}</span></div>
+  <div class="panel stat"><b>{{if $st.BusySec}}{{hours $st.BusySec}}{{else}}–{{end}}</b><span>computer time{{if $st.BusySec}} ({{hours $st.WhisperSec}} transcribing, {{hours $st.DiarizeSec}} finding speakers){{end}}</span></div>
   <div class="panel stat"><b>{{$st.CleanedEps}}</b><span>episodes cleaned up ({{$st.Corrections}} changes)</span></div>
   <div class="panel stat"><b>{{$st.Checks}}</b><span>passages checked in “Look Who's Talking Now”</span></div>
 </div>
@@ -48,12 +49,23 @@
   {{else}}<p class="empty">None.</p>{{end}}
 </section>
 
+{{with $st.Computers}}
+<section>
+  <h2 class="section-title">Computer time</h2>
+  <p class="sub narrow">How long each computer worked on episodes: downloading, transcribing, finding speakers. Speed: minutes of audio per minute of work.</p>
+  <table class="episodes">
+    <thead><tr><th>Computer</th><th class="num">Episodes</th><th class="num">Audio</th><th class="num">Busy</th><th class="num">Transcribing</th><th class="num">Speakers</th><th class="num">Speed</th><th>Last</th></tr></thead>
+    <tbody>{{range .}}<tr><td>{{.Name}}</td><td class="num">{{.Jobs}}</td><td class="num">{{hours .AudioSec}}</td><td class="num">{{hours .BusySec}}</td><td class="num">{{hours .WhisperSec}}</td><td class="num">{{hours .DiarizeSec}}</td><td class="num">{{.Speed}}</td><td class="date">{{ago .Last}}</td></tr>{{end}}</tbody>
+  </table>
+</section>
+{{end}}
+
 <section>
   <h2 class="section-title">Transcribed</h2>
-  {{with .Data.Transcribed}}
+  {{with .Data.Work}}
   <table class="episodes">
-    <thead><tr><th>When</th><th>Episode</th><th>Podcast</th><th>Computer</th></tr></thead>
-    <tbody>{{range .}}<tr><td class="date">{{ago .At}}</td><td><a href="/episodes/{{.EpisodeID}}">{{.Title}}</a></td><td>{{.Podcast}}</td><td>{{.Device}}</td></tr>{{end}}</tbody>
+    <thead><tr><th>When</th><th>Episode</th><th>Podcast</th><th>Computer</th><th class="num">Took</th><th class="num">Speed</th></tr></thead>
+    <tbody>{{range .}}<tr><td class="date">{{ago .At}}</td><td><a href="/episodes/{{.EpisodeID}}">{{.Title}}</a>{{if eq .Kind "speakers"}} <small class="sub">(speakers redone)</small>{{end}}</td><td>{{.Podcast}}</td><td>{{.Device}}</td><td class="num">{{if .BusySec}}{{hours .BusySec}}{{end}}</td><td class="num">{{.Speed}}</td></tr>{{end}}</tbody>
   </table>
   {{else}}<p class="empty">Nothing yet.</p>{{end}}
 </section>
