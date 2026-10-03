@@ -1,7 +1,7 @@
 # TODO
 
 Cleaned up 2026-09-27: only what Batz decided to keep. Order = planned order.
-Updated 2026-10-03 (v0.31.3) - see HANDOFF.md for the overall state.
+Updated 2026-10-03 (v0.32.0) - see HANDOFF.md for the overall state.
 
 ## Next up (open points as of v0.31.2)
 - [ ] Batz: look at the episode page, quiz and voice page on a real phone
@@ -9,6 +9,8 @@ Updated 2026-10-03 (v0.31.3) - see HANDOFF.md for the overall state.
 - [ ] Batz: on the server, update with ./install.sh (finds the existing
       service, keeps --listen/--trusted-proxy). Optional: add the CSP header
       from README-linux.txt to the Traefik secure-headers middleware.
+- [ ] Batz: look at QuickSack bright mode on the real server (button bottom
+      left) and say if any colour should change.
 - [ ] Optional: CF-Connecting-IP support (only if a Cloudflare proxy is ever
       put in front of the server).
 - [ ] Dependabot PRs: merge one at a time after CI is green.

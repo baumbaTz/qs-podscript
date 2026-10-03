@@ -771,7 +771,9 @@ details.inline-details[open] { display: block; margin-top: .4rem; }
 /* =====================================================================
    Look "QuickSack" (Setup -> Look): the style of quicksack.li - near-black,
    dark red accent, condensed uppercase headings (Oswald) and body text in
-   Source Sans 3. Always dark. Fonts are bundled (SIL OFL, see fonts/).
+   Source Sans 3. The default look. Dark, or bright with the same button as
+   Classic (dark unless the browser prefers light); the header bar stays
+   black in both. Fonts are bundled (SIL OFL, see fonts/).
    ===================================================================== */
 @font-face { font-family: "Oswald"; font-weight: 500; font-display: swap; src: url(fonts/oswald-latin-500-normal.woff2) format("woff2"); }
 @font-face { font-family: "Oswald"; font-weight: 600; font-display: swap; src: url(fonts/oswald-latin-600-normal.woff2) format("woff2"); }
@@ -781,25 +783,84 @@ details.inline-details[open] { display: block; margin-top: .4rem; }
 @font-face { font-family: "Source Sans 3"; font-weight: 700; font-display: swap; src: url(fonts/source-sans-3-latin-700-normal.woff2) format("woff2"); }
 
 :root[data-look="quicksack"] {
+  --accent: #B3191D; --accent-hi: #D3262B; --head: #0C0C0C;
+  --ui: "Source Sans 3", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --display: "Oswald", "Arial Narrow", "Roboto Condensed", Impact, sans-serif;
+  --r-sm: 4px; --r-md: 6px;
+}
+/* dark colours - for the page, and always for the black header bar */
+:root[data-look="quicksack"], :root[data-look="quicksack"] .top {
   color-scheme: dark;
   --ink: #ECE9E4; --ink-soft: #A7A39C; --paper: #121212; --panel: #1C1C1C; --rule: #3A3A3A;
   --link: #F2C14E; --ok: #6CC08E; --err: #FF7A6E; --meter: #D99A00;
-  --accent: #B3191D; --accent-hi: #D3262B; --head: #0C0C0C;
   --sp0: #6FA3E6; --sp1: #4CC3A2; --sp2: #C38BE0; --sp3: #EE7D71;
   --sp4: #C9B75A; --sp5: #5CC6DC; --sp6: #E38AB5; --sp7: #9AA3B0; --spu: #4A4A4A; --spv: #8A8A8A;
   --spv0: #8FA3C0; --spv1: #7FB5A6; --spv2: #B19DC0; --spv3: #C99C95;
   --spv4: #B3AA7A; --spv5: #8FB7C3; --spv6: #C09AAE; --spv7: #A0A0A0;
   --mk-ad: #E8954F; --mk-clip: #A98BE8;
-  --ui: "Source Sans 3", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  --display: "Oswald", "Arial Narrow", "Roboto Condensed", Impact, sans-serif;
-  --r-sm: 4px; --r-md: 6px;
+  --qs-strong: #FFFFFF;      /* titles that stand out */
+  --qs-line: #2E2E2E;        /* panel and list borders */
+  --qs-field: #222222; --qs-field-line: #444444;
+  --qs-search: #1A1A1A; --qs-search-line: #3E3E3E;
+  --qs-quiet-line: #5A5A5A; --qs-chip-line: #4A4A4A; --qs-jump-line: #444444;
+  --qs-pop: #1A1A1A; --qs-pop-line: #3A3A3A; --qs-art-line: #333333;
+  --qs-hover: rgba(255,255,255,.04); --qs-hover2: rgba(255,255,255,.08);
+  --qs-hit: rgba(179,25,29,.45); --qs-danger-hover: rgba(255,122,110,.12);
+}
+/* bright colours: chosen with the button, or the browser prefers light */
+:root[data-look="quicksack"][data-theme="light"] {
+  color-scheme: light;
+  --ink: #1A1A1A; --ink-soft: #5E5A55; --paper: #F4F2EE; --panel: #FFFFFF; --rule: #8C8780;
+  --link: #8A5A00; --ok: #2E7D4F; --err: #B3261E; --meter: #D99A00;
+  --sp0: #2563A8; --sp1: #0F8A6A; --sp2: #8E3FB0; --sp3: #C0392B;
+  --sp4: #7A6A10; --sp5: #1E8FA8; --sp6: #B0487A; --sp7: #5B6472; --spu: #BDBAB5; --spv: #6B6B6B;
+  --spv0: #53698C; --spv1: #467A6B; --spv2: #735E86; --spv3: #8C5C55;
+  --spv4: #6F6640; --spv5: #4D7A86; --spv6: #845C71; --spv7: #636363;
+  --mk-ad: #B4540F; --mk-clip: #6A45B8;
+  --qs-strong: #111111;
+  --qs-line: #D8D4CE;
+  --qs-field: #FFFFFF; --qs-field-line: #8C8780;
+  --qs-search: #FFFFFF; --qs-search-line: #8C8780;
+  --qs-quiet-line: #8C8780; --qs-chip-line: #A8A39C; --qs-jump-line: #B5B0A9;
+  --qs-pop: #FFFFFF; --qs-pop-line: #CFCAC3; --qs-art-line: #D0CCC6;
+  --qs-hover: rgba(0,0,0,.04); --qs-hover2: rgba(0,0,0,.07);
+  --qs-hit: rgba(179,25,29,.18); --qs-danger-hover: rgba(179,38,30,.08);
+}
+@media (prefers-color-scheme: light) {
+  :root[data-look="quicksack"]:not([data-theme="dark"]) {
+    color-scheme: light;
+    --ink: #1A1A1A; --ink-soft: #5E5A55; --paper: #F4F2EE; --panel: #FFFFFF; --rule: #8C8780;
+    --link: #8A5A00; --ok: #2E7D4F; --err: #B3261E; --meter: #D99A00;
+    --sp0: #2563A8; --sp1: #0F8A6A; --sp2: #8E3FB0; --sp3: #C0392B;
+    --sp4: #7A6A10; --sp5: #1E8FA8; --sp6: #B0487A; --sp7: #5B6472; --spu: #BDBAB5; --spv: #6B6B6B;
+    --spv0: #53698C; --spv1: #467A6B; --spv2: #735E86; --spv3: #8C5C55;
+    --spv4: #6F6640; --spv5: #4D7A86; --spv6: #845C71; --spv7: #636363;
+    --mk-ad: #B4540F; --mk-clip: #6A45B8;
+    --qs-strong: #111111;
+    --qs-line: #D8D4CE;
+    --qs-field: #FFFFFF; --qs-field-line: #8C8780;
+    --qs-search: #FFFFFF; --qs-search-line: #8C8780;
+    --qs-quiet-line: #8C8780; --qs-chip-line: #A8A39C; --qs-jump-line: #B5B0A9;
+    --qs-pop: #FFFFFF; --qs-pop-line: #CFCAC3; --qs-art-line: #D0CCC6;
+    --qs-hover: rgba(0,0,0,.04); --qs-hover2: rgba(0,0,0,.07);
+    --qs-hit: rgba(179,25,29,.18); --qs-danger-hover: rgba(179,38,30,.08);
+  }
 }
 :root[data-look="quicksack"] body { font-size: 16px; }
-/* the theme switch makes no sense here: this look is always dark */
-:root[data-look="quicksack"] #themenav, :root[data-look="quicksack"] #themebtn2 { display: none !important; }
+/* light/dark button in the phone header: a plain outlined icon, not a red button */
+:root[data-look="quicksack"] .top .theme-mini { background: transparent; color: var(--ink); border: 1px solid var(--qs-quiet-line); padding: .25rem .4rem; }
+:root[data-look="quicksack"] .top .theme-mini:not(:disabled):hover { background: var(--qs-hover2); border-color: var(--ink); }
+.top .account button { white-space: nowrap; }
+/* the light/dark button previews the mode it switches to */
+:root[data-look="quicksack"] .themenav.to-light { background: #F4F2EE; border-color: #8C8780; }
+:root[data-look="quicksack"] .themenav.to-light button { color: #1A1A1A; }
+:root[data-look="quicksack"] .themenav.to-light button:hover { background: #E6E2DC; }
+:root[data-look="quicksack"] .themenav.to-dark { background: #1C1C1C; border-color: #3A3A3A; }
+:root[data-look="quicksack"] .themenav.to-dark button { color: #ECE9E4; }
+:root[data-look="quicksack"] .themenav.to-dark button:hover { background: #2A2A2A; }
 
 /* header: black bar with the red line underneath */
-:root[data-look="quicksack"] .top { background: var(--head); border-bottom: 2px solid var(--accent); }
+:root[data-look="quicksack"] .top { background: var(--head); border-bottom: 2px solid var(--accent); color: var(--ink); }
 :root[data-look="quicksack"] .brand { font: 600 1.35rem/1.1 var(--display); text-transform: uppercase; letter-spacing: .02em; color: #fff; }
 :root[data-look="quicksack"] .top nav a { font: 500 .95rem var(--display); text-transform: uppercase; letter-spacing: .05em; color: var(--ink-soft); }
 :root[data-look="quicksack"] .top nav a[aria-current] { color: #fff; box-shadow: inset 0 -2px 0 var(--accent); }
@@ -814,8 +875,8 @@ details.inline-details[open] { display: block; margin-top: .4rem; }
   font-family: var(--display); font-weight: 600; text-transform: uppercase; letter-spacing: .03em;
 }
 :root[data-look="quicksack"] h1 { font-size: 1.9rem; }
-:root[data-look="quicksack"] .feed-title { font-size: 1.15rem; color: #fff; text-decoration: none; }
-:root[data-look="quicksack"] .hit-ep { color: #fff; }
+:root[data-look="quicksack"] .feed-title { font-size: 1.15rem; color: var(--qs-strong); text-decoration: none; }
+:root[data-look="quicksack"] .hit-ep { color: var(--qs-strong); }
 
 /* buttons: outlined, condensed caps; the main ones red */
 :root[data-look="quicksack"] button, :root[data-look="quicksack"] .button {
@@ -824,9 +885,9 @@ details.inline-details[open] { display: block; margin-top: .4rem; }
 }
 :root[data-look="quicksack"] button:not(:disabled):hover, :root[data-look="quicksack"] .button:hover { background: var(--accent-hi); border-color: var(--accent-hi); filter: none; }
 :root[data-look="quicksack"] button.quiet, :root[data-look="quicksack"] .button.quiet {
-  background: transparent; color: var(--ink); border: 1px solid #5A5A5A;
+  background: transparent; color: var(--ink); border: 1px solid var(--qs-quiet-line);
 }
-:root[data-look="quicksack"] button.quiet:not(:disabled):hover, :root[data-look="quicksack"] .button.quiet:hover { border-color: var(--ink); background: rgba(255,255,255,.04); }
+:root[data-look="quicksack"] button.quiet:not(:disabled):hover, :root[data-look="quicksack"] .button.quiet:hover { border-color: var(--ink); background: var(--qs-hover); }
 :root[data-look="quicksack"] button.small { font-size: .78rem; padding: .2rem .55rem; }
 /* buttons that are really links or controls keep their plain look */
 :root[data-look="quicksack"] button.lane-name, :root[data-look="quicksack"] button.who, :root[data-look="quicksack"] button.switch,
@@ -841,28 +902,28 @@ details.inline-details[open] { display: block; margin-top: .4rem; }
 :root[data-look="quicksack"] .place-pop .place-opt { color: var(--ink); padding: .45rem .55rem; }
 
 /* panels, inputs, tabs */
-:root[data-look="quicksack"] .panel, :root[data-look="quicksack"] details.panel { background: var(--panel); border-color: #2E2E2E; }
-:root[data-look="quicksack"] input, :root[data-look="quicksack"] select, :root[data-look="quicksack"] textarea { background: #222; color: var(--ink); border: 1px solid #444; border-radius: var(--r-sm); }
-:root[data-look="quicksack"] .search-row input[type=search] { background: #1A1A1A; border-color: #3E3E3E; }
+:root[data-look="quicksack"] .panel, :root[data-look="quicksack"] details.panel { background: var(--panel); border-color: var(--qs-line); }
+:root[data-look="quicksack"] input, :root[data-look="quicksack"] select, :root[data-look="quicksack"] textarea { background: var(--qs-field); color: var(--ink); border: 1px solid var(--qs-field-line); border-radius: var(--r-sm); }
+:root[data-look="quicksack"] .search-row input[type=search] { background: var(--qs-search); border-color: var(--qs-search-line); }
 :root[data-look="quicksack"] .tabs a { font: 500 .95rem var(--display); text-transform: uppercase; letter-spacing: .05em; }
-:root[data-look="quicksack"] .tabs a[aria-current] { background: var(--panel); border-color: #3A3A3A; color: #fff; box-shadow: inset 0 2px 0 var(--accent); }
-:root[data-look="quicksack"] .jump a { font: 500 .8rem var(--display); text-transform: uppercase; letter-spacing: .05em; border-color: #444; }
-:root[data-look="quicksack"] .jump a:hover { border-color: var(--accent); color: #fff; }
-:root[data-look="quicksack"] .feeds, :root[data-look="quicksack"] .feeds li { border-color: #2E2E2E; }
+:root[data-look="quicksack"] .tabs a[aria-current] { background: var(--panel); border-color: var(--qs-pop-line); color: var(--qs-strong); box-shadow: inset 0 2px 0 var(--accent); }
+:root[data-look="quicksack"] .jump a { font: 500 .8rem var(--display); text-transform: uppercase; letter-spacing: .05em; border-color: var(--qs-jump-line); }
+:root[data-look="quicksack"] .jump a:hover { border-color: var(--accent); color: var(--qs-strong); }
+:root[data-look="quicksack"] .feeds, :root[data-look="quicksack"] .feeds li { border-color: var(--qs-line); }
 :root[data-look="quicksack"] .crumb a { color: var(--link); }
 :root[data-look="quicksack"] .meter span:not(.busy) { background: var(--accent-hi); }
 :root[data-look="quicksack"] .flash { border-left: 3px solid var(--accent); }
-:root[data-look="quicksack"] .hits mark, :root[data-look="quicksack"] .u .hit { background: rgba(179, 25, 29, .45); }
-:root[data-look="quicksack"] .art { box-shadow: 0 0 0 1px #333; }
+:root[data-look="quicksack"] .hits mark, :root[data-look="quicksack"] .u .hit { background: var(--qs-hit); }
+:root[data-look="quicksack"] .art { box-shadow: 0 0 0 1px var(--qs-art-line); }
 /* special buttons keep their own shape in this look */
 :root[data-look="quicksack"] .pagenav button { background: transparent; border: 0; padding: 0; color: var(--ink); font-size: 1.05rem; }
-:root[data-look="quicksack"] .pagenav button:hover { background: rgba(255,255,255,.08); }
-:root[data-look="quicksack"] .pagenav { background: #1A1A1A; border: 1px solid #333; }
-:root[data-look="quicksack"] button.chip-btn { background: transparent; color: var(--ink); border: 1px solid #4A4A4A; border-radius: 999px; padding: .22rem .75rem; font-size: .9rem; font-weight: 500; }
+:root[data-look="quicksack"] .pagenav button:hover { background: var(--qs-hover2); }
+:root[data-look="quicksack"] .pagenav:not(.themenav) { background: var(--qs-pop); border: 1px solid var(--qs-pop-line); }
+:root[data-look="quicksack"] button.chip-btn { background: transparent; color: var(--ink); border: 1px solid var(--qs-chip-line); border-radius: 999px; padding: .22rem .75rem; font-size: .9rem; font-weight: 500; }
 :root[data-look="quicksack"] button.chip-btn:hover { border-color: var(--c, var(--ink)); background: transparent; }
 :root[data-look="quicksack"] button.danger { background: transparent; color: var(--err); border-color: var(--err); }
-:root[data-look="quicksack"] button.danger:not(:disabled):hover { background: rgba(255,122,110,.12); border-color: var(--err); }
-:root[data-look="quicksack"] .place-pop { background: #1A1A1A; border-color: #3A3A3A; }
+:root[data-look="quicksack"] button.danger:not(:disabled):hover { background: var(--qs-danger-hover); border-color: var(--err); }
+:root[data-look="quicksack"] .place-pop { background: var(--qs-pop); border-color: var(--qs-pop-line); }
 /* Setup: choosing the look */
 .looks { display: flex; flex-wrap: wrap; gap: 1rem; align-items: stretch; max-width: 46rem; }
 .looks button { align-self: center; }

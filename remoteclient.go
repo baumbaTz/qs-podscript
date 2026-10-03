@@ -608,7 +608,7 @@ func startPassThrough(st *Store, localURL string, basePort int) (string, error) 
 				pr.Out.Header.Set(localAppHeader, localURL)
 				pr.Out.Header.Set(apiVersionHdr, version)
 				pr.Out.Header.Set(placesHeader, encodePlaces(placeList(st)))
-				pr.Out.Header.Set(lookHeader, st.Setting("look", lookClassic))
+				pr.Out.Header.Set(lookHeader, st.Setting("look", lookDefault))
 				pr.Out.Header.Del("Cookie")
 				// checked below; the server must not see our local origin
 				pr.Out.Header.Del("Origin")

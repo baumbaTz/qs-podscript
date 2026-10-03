@@ -15,3 +15,7 @@
 *.tmp
 .DS_Store
 /.wav
+
+# release files unpacked or saved in the repo folder by mistake
+/qs-podscript-*.zip
+/qs-podscript-*.tar.gz

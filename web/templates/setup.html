@@ -182,12 +182,12 @@
 <h2 class="section-title">Look</h2>
 <p class="sub narrow">{{if .ServerMode}}How the server's pages look for visitors. Helpers working through their own QS-PodScript see the look chosen there.{{else}}How QS-PodScript looks on this computer – also the server pages you open here.{{end}}</p>
 <form method="post" action="/settings/look" class="looks">
+  <label class="look-card look-qs"><input type="radio" name="look" value="quicksack" {{if eq .Look "quicksack"}}checked{{end}}>
+    <span class="look-swatch" aria-hidden="true"><i></i><i></i><i></i></span>
+    <b>QuickSack</b><small>Like quicksack.li: black header, dark red, condensed headings; dark or bright (button at the bottom left). The default.</small></label>
   <label class="look-card look-classic"><input type="radio" name="look" value="classic" {{if eq .Look "classic"}}checked{{end}}>
     <span class="look-swatch" aria-hidden="true"><i></i><i></i><i></i></span>
     <b>Classic</b><small>Calm and plain; bright or dark (button at the bottom left).</small></label>
-  <label class="look-card look-qs"><input type="radio" name="look" value="quicksack" {{if eq .Look "quicksack"}}checked{{end}}>
-    <span class="look-swatch" aria-hidden="true"><i></i><i></i><i></i></span>
-    <b>QuickSack</b><small>Like quicksack.li: black, dark red, condensed headings. Always dark.</small></label>
   <button type="submit">Use this look</button>
 </form>
 </section>

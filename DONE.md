@@ -1,5 +1,27 @@
 # DONE
 
+## 2026-10-03 – v0.32.0 – QuickSack is the default look, now also bright
+- QuickSack (the quicksack.li style) is the default look. Installs where a
+  look was saved in Setup → Look keep theirs; Classic stays available.
+- QuickSack can be bright as well: the same round button as in Classic
+  (bottom left, on phones in the header) switches dark/bright and is
+  remembered in that browser; without it the page follows the device
+  setting (dark unless the device prefers light). Bright: warm off-white
+  page, white panels, the same red buttons and accent, dark-gold links,
+  the speaker colours of Classic's bright mode. The header bar stays black
+  with the red line in both modes.
+- All QuickSack colours are now colour tokens (--qs-* and the usual ones)
+  with a dark and a bright set instead of fixed dark values - checked for
+  contrast (text at least 4.5:1, borders at least 3:1).
+- Phone header: the dark/bright button is a plain outlined icon in
+  QuickSack (it took the red button style); "Log out" no longer wraps
+  onto two lines.
+- Setup → Look lists QuickSack first ("The default"); manual updated.
+- Repository: web.go and README-linux.txt are back - the v0.31.3 commit had
+  deleted them by mistake, so v0.31.3 on GitHub didn't build. .gitignore now
+  ignores release zips/tarballs in the repo folder (the 0.31.2 changes zip
+  had been committed along with the files).
+
 ## 2026-10-03 – v0.31.3 – faster first load (PageSpeed)
 - QuickSack look: the four fonts it uses are preloaded in the page head, so
   the browser fetches them together with app.css instead of only after it
