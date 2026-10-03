@@ -1,5 +1,23 @@
 # DONE
 
+## 2026-10-03 – v0.34.0 – connect to a server while installing
+- Installers can connect the computer to a shared server - the same as
+  Setup -> "Where you work" -> "Add a server" (the Setup page is unchanged).
+  When no server is saved yet they ask once (default: no): address, your
+  name, password (not shown), an optional name for it, and whether to
+  "Transcribe for this server". Wrong password: try again (3 times), or
+  skip and do it later in Setup. Updates don't ask again; -y / -n /
+  --defaults never ask.
+  Linux: ./install.sh --connect ADDRESS --connect-user NAME
+  [--connect-label TEXT] [--connect-work]. Windows: install.cmd -Connect
+  ADDRESS -ConnectUser NAME [-ConnectLabel TEXT] [-ConnectWork].
+- New command: qs-podscript connect <address> --user NAME [--label TEXT]
+  [--work], and qs-podscript connect list. Asks for the password without
+  showing it (or takes QSPODSCRIPT_PASSWORD). Also the way on macOS.
+- The password is only used to log in once (the server gives the computer
+  its own key, as before) and is never written to the install log.
+- READMEs (Linux, Windows, macOS, GitHub) and the manual mention it.
+
 ## 2026-10-03 – v0.33.0 – logo, link previews, search engines
 - Logo: a red rounded square with a white speech bubble saying "QSP" (the
   P in red), so it's recognisable without the name next to it. Own

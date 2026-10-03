@@ -93,3 +93,11 @@ func TestMetaHelpers(t *testing.T) {
 		t.Errorf("origin: %q", got)
 	}
 }
+
+func TestConnectNeedsUser(t *testing.T) {
+	for _, args := range [][]string{nil, {"https://x.example.org"}, {"--user", "a"}} {
+		if err := cmdConnect(args); err == nil || !strings.Contains(err.Error(), "usage") {
+			t.Errorf("connect %v: want usage error, got %v", args, err)
+		}
+	}
+}

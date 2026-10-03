@@ -35,7 +35,9 @@ MANUAL: once QS-PodScript runs, click "Help" at the top of the page.
 
 SHARED SERVER: Setup -> "Where you work" -> "Add a server". Then switch to a
 server with the menu next to the name at the top. Tick "Transcribe for this
-server" to let this Mac transcribe episodes for it.
+server" to let this Mac transcribe episodes for it. Or in Terminal, in the
+QS-PodScript folder (asks for the password, not shown):
+  ./qs-podscript connect https://transcribe.example.org --user NAME --work
 
 Speaker detection runs on the processor on a Mac (fast enough on Apple
 Silicon); transcription uses the GPU through Metal.

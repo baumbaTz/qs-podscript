@@ -70,7 +70,10 @@ HOMESERVER (shared, multi-user) - e.g. in an LXC container
   The server doesn't transcribe itself (unless switched on: server Setup ->
   "Who transcribes"). The work is done by helpers' computers: a QS-PodScript
   on a PC with a graphics card that added the server (Setup -> "Where you
-  work" -> "Add a server") with "Transcribe for this server" ticked. Each
+  work" -> "Add a server", or when installing: ./install.sh asks once, or
+  ./install.sh --connect <address> --connect-user NAME --connect-work, or
+  later: qs-podscript connect <address> --user NAME --work) with "Transcribe
+  for this server" ticked. Each
   one takes one episode at a time; several work in parallel. Keep the server
   and all helpers on the same QS-PodScript version.
   Easiest: install it as a server in one go (system service

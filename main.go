@@ -14,7 +14,7 @@ import (
 	"time"
 )
 
-const version = "0.33.0"
+const version = "0.34.0"
 
 const usageText = `QS-PodScript ` + version + ` - podcast transcription with speaker detection
 
@@ -28,6 +28,13 @@ Homeserver (shared, multi-user):
   server [--listen 127.0.0.1:8322]        run as server: public read-only pages, logins,
                                           editors fix the podcasts assigned to them
   user list | add <name> [--admin] | passwd <name> | admin <name> | delete <name>
+
+Helping a server (this computer):
+  connect <server address> --user NAME [--label TEXT] [--work]
+                                          add a shared server (same as Setup -> Add a server);
+                                          asks for the password (or QSPODSCRIPT_PASSWORD);
+                                          --work: transcribe for it
+  connect list                            the saved servers
 
 Setup:
   setup [--model NAME] [--cpu] [--force]   download ffmpeg, whisper.cpp and models
@@ -96,6 +103,8 @@ func main() {
 		err = cmdServe(ctx, args[1:])
 	case "server":
 		err = cmdServer(ctx, args[1:])
+	case "connect":
+		err = cmdConnect(args[1:])
 	case "user", "users":
 		err = cmdUser(args[1:])
 	case "setup":

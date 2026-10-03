@@ -20,6 +20,12 @@
 #   -Dir PATH            install folder (default: %LOCALAPPDATA%\qs-podscript)
 #   -Desktop / -Autostart / -NoAutostart
 #   -NoSetup             only copy files (no downloads)
+#   Connect to a shared server (like Setup -> "Add a server"; without these
+#   the installer asks once, unless a server is saved already):
+#   -Connect ADDRESS     the server, e.g. https://transcribe.example.org
+#   -ConnectUser NAME    your login there (the password is asked for, hidden)
+#   -ConnectLabel TEXT   name for the server on this computer
+#   -ConnectWork         "Transcribe for this server"
 
 param(
     [Alias('y')][switch]$Yes,
@@ -31,7 +37,11 @@ param(
     [switch]$Desktop,
     [switch]$Autostart,
     [switch]$NoAutostart,
-    [switch]$NoSetup
+    [switch]$NoSetup,
+    [string]$Connect = '',
+    [string]$ConnectUser = '',
+    [string]$ConnectLabel = '',
+    [switch]$ConnectWork
 )
 
 $ErrorActionPreference = 'Stop'
@@ -188,6 +198,64 @@ if (-not $NoSetup) {
     Write-Host ""
     & (Join-Path $Dir 'qs-podscript.exe') setup --gpu $Gpu --model $Model
     if ($LASTEXITCODE -ne 0) { Fail "Setup failed (see above). Fix the problem and run the installer again - finished downloads are kept." }
+}
+
+# ---------------------------------------------------------------- shared server (optional)
+# Same as Setup -> "Where you work" -> "Add a server". The password is read
+# hidden, handed to qs-podscript through an environment variable and never
+# written to the install log.
+$exe = Join-Path $Dir 'qs-podscript.exe'
+function Invoke-QS([string[]]$a) {
+    $prev = $ErrorActionPreference; $ErrorActionPreference = 'Continue'
+    try { $out = (& $exe @a 2>&1 | Out-String) } finally { $ErrorActionPreference = $prev }
+    return @{ Code = $LASTEXITCODE; Out = $out }
+}
+function Connect-Server {
+    for ($try = 1; $try -le 3; $try++) {
+        $sec = Read-Host "   ?   Password for $ConnectUser on the server" -AsSecureString
+        $b = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($sec)
+        try { $pw = [Runtime.InteropServices.Marshal]::PtrToStringBSTR($b) } finally { [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($b) }
+        if ([string]::IsNullOrEmpty($pw)) { Warn "No password given."; return $false }
+        $a = @('connect', $Connect, '--user', $ConnectUser)
+        if ($ConnectLabel) { $a += @('--label', $ConnectLabel) }
+        if ($ConnectWork) { $a += '--work' }
+        $env:QSPODSCRIPT_PASSWORD = $pw
+        try { $r = Invoke-QS $a } finally { Remove-Item Env:QSPODSCRIPT_PASSWORD -ErrorAction SilentlyContinue; $pw = $null }
+        if ($r.Code -eq 0) {
+            Ok "Connected to $Connect as $ConnectUser"
+            if ($ConnectWork) { Info '"Start transcribing" also does this server''s episodes (after your own).' }
+            return $true
+        }
+        $msg = ($r.Out -split "`n" | Where-Object { $_ -match 'error' } | Select-Object -First 1) -replace '^\s*ERROR:\s*', ''
+        Warn $msg.Trim()
+        if ($try -lt 3 -and -not (Ask "Try again?" $true)) { return $false }
+    }
+    return $false
+}
+if (-not $NoSetup -or $Connect) {
+    $saved = (Invoke-QS @('connect', 'list')).Out
+    $hasServers = $saved -notmatch 'No servers saved'
+    $later = 'Not connected. Add the server later in QS-PodScript: Setup -> Where you work -> Add a server.'
+    if ($Connect) {
+        Step "Connecting to the shared server"
+        if (-not $ConnectUser) { $ConnectUser = (Read-Host "   ?   Your name (login) on the server").Trim() }
+        if (-not $ConnectUser) { Warn "-Connect needs -ConnectUser NAME - skipped." }
+        elseif (-not (Connect-Server)) { Warn $later }
+    }
+    elseif (-not $hasServers -and -not ($Yes -or $No -or $Defaults)) {
+        Step "Shared server (optional)"
+        Info "If someone runs a shared QS-PodScript server (e.g. for a podcast you help with),"
+        Info "this computer can connect to it now - to work on its podcasts and help transcribing."
+        Info "You can also do this later in QS-PodScript: Setup -> Where you work -> Add a server."
+        if (Ask "Connect to a shared server now?" $false) {
+            $Connect = (Read-Host "   ?   Server address (e.g. https://transcribe.example.org)").Trim()
+            $ConnectUser = (Read-Host "   ?   Your name (login) on the server").Trim()
+            $ConnectLabel = (Read-Host "   ?   Name for it on this computer (optional, Enter to skip)").Trim()
+            if (Ask 'Transcribe for this server when you press "Start transcribing"?' $false) { $ConnectWork = [switch]$true }
+            if ($Connect -and $ConnectUser) { if (-not (Connect-Server)) { Warn $later } }
+            else { Info "Skipped (address or name missing)." }
+        }
+    }
 }
 
 # ---------------------------------------------------------------- shortcuts

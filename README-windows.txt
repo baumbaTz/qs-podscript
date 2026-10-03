@@ -55,6 +55,11 @@ SHARED SERVER
   Search and People show that server until you switch back. Tick
   "Transcribe for this server" to let this computer transcribe episodes for
   it after your own queue.
+  The installer can do this too: it asks once whether to connect to a shared
+  server (address, your name, password - not shown), or pass it directly:
+    install.cmd -Connect https://transcribe.example.org -ConnectUser NAME -ConnectWork
+  Or from a command prompt in the QS-PodScript folder:
+    qs-podscript.exe connect https://transcribe.example.org --user NAME --work
 
 WITHOUT INSTALLER
   qs-podscript.exe also runs straight from the unzipped folder; everything it

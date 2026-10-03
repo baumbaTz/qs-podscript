@@ -96,7 +96,9 @@ service and keeps its settings.
 Visitors read, listen and search without an account. Editors (per podcast)
 fix speakers and text in the browser. The server normally doesn't transcribe
 itself: helpers add it in their own QS-PodScript (**Setup → Where you work →
-Add a server**), switch to it with the menu at the top and let their computer
+Add a server**, or right in the installer: it asks once, or
+`./install.sh --connect <address> --connect-user NAME --connect-work` /
+`install.cmd -Connect <address> -ConnectUser NAME -ConnectWork`), switch to it with the menu at the top and let their computer
 transcribe for it. Details: the Linux package's README and the manual (Help →
 "The shared homeserver").
 

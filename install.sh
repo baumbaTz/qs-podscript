@@ -31,6 +31,15 @@
 #   --trusted-proxy IP     address of the reverse proxy if it runs on another
 #                          machine/container (comma-separated for several)
 #   --admin NAME           create the first admin login (asks for a password)
+#
+# Connecting this computer to a shared server (optional, like Setup -> "Add
+# a server"; without these options the installer asks once):
+#   --connect ADDRESS      the server, e.g. https://transcribe.example.org
+#   --connect-user NAME    your login there (the password is asked for, not
+#                          shown - or set QSPODSCRIPT_PASSWORD)
+#   --connect-label TEXT   name for the server on this computer
+#   --connect-work         "Transcribe for this server" (helps when you press
+#                          "Start transcribing")
 # Example:  ./install.sh --server --trusted-proxy 192.168.1.10 --admin batz
 # Updating a server: just run the new install.sh again - it sees the existing
 # service and keeps its settings.
@@ -62,6 +71,10 @@ TRUSTED=""
 TRUSTED_SET=0
 ADMIN_NAME=""
 SERVER_UNIT="/etc/systemd/system/qs-podscript-server.service"
+CONNECT_URL=""
+CONNECT_USER=""
+CONNECT_LABEL=""
+CONNECT_WORK=0
 
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -79,6 +92,10 @@ while [ $# -gt 0 ]; do
     --listen) SERVER=1; LISTEN="$2"; shift 2 ;;
     --trusted-proxy) SERVER=1; TRUSTED="$2"; TRUSTED_SET=1; shift 2 ;;
     --admin) SERVER=1; ADMIN_NAME="$2"; shift 2 ;;
+    --connect) CONNECT_URL="$2"; shift 2 ;;
+    --connect-user) CONNECT_USER="$2"; shift 2 ;;
+    --connect-label) CONNECT_LABEL="$2"; shift 2 ;;
+    --connect-work) CONNECT_WORK=1; shift ;;
     --help|-h) awk 'NR == 1 { next } /^#/ { sub(/^# ?/, ""); print; next } { exit }' "$0"; exit 0 ;;
     *) echo "Unknown option: $1 (see --help)"; exit 1 ;;
   esac
@@ -541,6 +558,60 @@ else
     fi
   else
     info "Speaker detection runs on the processor (add it later with: ./install.sh --gpu-speakers)."
+  fi
+fi
+
+# ------------------------------------------------------------------ shared server (optional)
+# Same as Setup -> "Where you work" -> "Add a server". Asked only when no
+# server is saved yet (updates don't ask again) and nobody answers for us.
+connect_server() { # connect_server -> 0 if connected
+  local pw="${QSPODSCRIPT_PASSWORD:-}" args tries=0
+  while :; do
+    if [ -z "$pw" ]; then
+      [ -t 0 ] || { warn "No password (set QSPODSCRIPT_PASSWORD or run in a terminal)."; return 1; }
+      read -r -s -p "    Password for $CONNECT_USER on the server: " pw || true; echo
+      [ -n "$pw" ] || { warn "No password given."; return 1; }
+    fi
+    args=(connect "$CONNECT_URL" --user "$CONNECT_USER")
+    [ -n "$CONNECT_LABEL" ] && args+=(--label "$CONNECT_LABEL")
+    [ "$CONNECT_WORK" = 1 ] && args+=(--work)
+    if OUT="$(QSPODSCRIPT_PASSWORD="$pw" "$INSTALL_DIR/qs-podscript" "${args[@]}" 2>&1)"; then
+      echo "+ qs-podscript connect $CONNECT_URL --user $CONNECT_USER (password not logged)" >> "$LOG"
+      ok "Connected to $CONNECT_URL as $CONNECT_USER"
+      [ "$CONNECT_WORK" = 1 ] && info "\"Start transcribing\" also does this server's episodes (after your own)."
+      return 0
+    fi
+    warn "$(grep -m1 -i 'error' <<<"$OUT" | sed 's/^ERROR: //')"
+    pw=""; tries=$((tries + 1))
+    if [ -n "${QSPODSCRIPT_PASSWORD:-}" ] || [ ! -t 0 ] || [ "$tries" -ge 3 ]; then return 1; fi
+    ask "Try again?" y || return 1
+  done
+}
+if [ "$SERVER" != 1 ]; then
+  HAS_SERVERS=1
+  SAVED="$("$INSTALL_DIR/qs-podscript" connect list 2>/dev/null || true)"
+  case "$SAVED" in *"No servers saved"*) HAS_SERVERS=0 ;; esac
+  if [ -n "$CONNECT_URL" ]; then
+    step "Connecting to the shared server"
+    if [ -z "$CONNECT_USER" ] && [ -t 0 ]; then read -r -p "    Your name (login) on the server: " CONNECT_USER || true; fi
+    if [ -z "$CONNECT_USER" ]; then warn "--connect needs --connect-user NAME - skipped."
+    else connect_server || warn "Not connected. Add the server later in QS-PodScript: Setup -> Where you work -> Add a server."; fi
+  elif [ "$HAS_SERVERS" = 0 ] && [ -z "$AUTO_ANSWER" ] && [ -t 0 ]; then
+    step "Shared server (optional)"
+    info "If someone runs a shared QS-PodScript server (e.g. for a podcast you help with),"
+    info "this computer can connect to it now - to work on its podcasts and help transcribing."
+    info "You can also do this later in QS-PodScript: Setup -> Where you work -> Add a server."
+    if ask "Connect to a shared server now?" n; then
+      read -r -p "    Server address (e.g. https://transcribe.example.org): " CONNECT_URL || true
+      read -r -p "    Your name (login) on the server: " CONNECT_USER || true
+      read -r -p "    Name for it on this computer (optional, Enter to skip): " CONNECT_LABEL || true
+      ask "Transcribe for this server when you press \"Start transcribing\"?" n && CONNECT_WORK=1
+      if [ -n "$CONNECT_URL" ] && [ -n "$CONNECT_USER" ]; then
+        connect_server || warn "Not connected. Add the server later in QS-PodScript: Setup -> Where you work -> Add a server."
+      else
+        info "Skipped (address or name missing)."
+      fi
+    fi
   fi
 fi
 
