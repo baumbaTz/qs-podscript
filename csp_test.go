@@ -4,6 +4,7 @@ import (
 	"io/fs"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"regexp"
 	"strings"
 	"testing"
@@ -89,5 +90,20 @@ func TestConnectNeedsUser(t *testing.T) {
 		if err := cmdConnect(args); err == nil || !strings.Contains(err.Error(), "usage") {
 			t.Errorf("connect %v: want usage error, got %v", args, err)
 		}
+	}
+}
+
+// install.sh downloads sherpa-onnx's GPU build; it must be the same version
+// as the Go binding (the C API must match).
+func TestGPUSherpaVersionMatchesGoMod(t *testing.T) {
+	mod, _ := os.ReadFile("go.mod")
+	sh, _ := os.ReadFile("install.sh")
+	m := regexp.MustCompile(`k2-fsa/sherpa-onnx-go v(\S+)`).FindSubmatch(mod)
+	v := regexp.MustCompile(`SHERPA_GPU_VERSION="([^"]+)"`).FindSubmatch(sh)
+	if m == nil || v == nil {
+		t.Fatal("version not found in go.mod or install.sh")
+	}
+	if string(m[1]) != string(v[1]) {
+		t.Errorf("install.sh SHERPA_GPU_VERSION %s, go.mod sherpa-onnx-go %s – update the GPU download (name + sha256) too", v[1], m[1])
 	}
 }

@@ -1,7 +1,7 @@
 #!/bin/sh
 # Builds QS-PodScript for Linux (native) and Windows (cross-compiled with MinGW)
 # and packages the Windows version as a zip.
-# Needs: Go >= 1.22, gcc, x86_64-w64-mingw32-gcc (apt install gcc-mingw-w64-x86-64)
+# Needs: Go >= 1.22, gcc, patchelf, x86_64-w64-mingw32-gcc (apt install gcc-mingw-w64-x86-64 patchelf)
 set -e
 cd "$(dirname "$0")"
 VERSION=$(grep 'const version' main.go | cut -d'"' -f2)
@@ -12,6 +12,15 @@ mkdir -p dist
 echo "== linux"
 # $ORIGIN: find the sherpa libraries next to the binary (portable folder)
 go build -trimpath -tags sqlite_fts5 -ldflags "-s -w -extldflags '-Wl,-rpath,\$ORIGIN'" -o dist/linux/qs-podscript .
+# the sherpa-onnx Go package adds the build machine's module folder to the
+# library search path, ahead of $ORIGIN - on a computer where that folder
+# exists, the CPU-only library from there would win over the graphics-card
+# library the installer puts next to the program. Keep only $ORIGIN.
+if command -v patchelf >/dev/null; then
+  patchelf --set-rpath '$ORIGIN' dist/linux/qs-podscript
+else
+  echo "WARNING: patchelf missing (apt install patchelf) - library path still contains the build folder"
+fi
 LSHERPA=$(go env GOMODCACHE)/github.com/k2-fsa/sherpa-onnx-go-linux@$(go list -m -f '{{.Version}}' github.com/k2-fsa/sherpa-onnx-go-linux)/lib/x86_64-unknown-linux-gnu
 cp "$LSHERPA/libsherpa-onnx-c-api.so" "$LSHERPA/libonnxruntime.so" dist/linux/
 chmod 644 dist/linux/*.so

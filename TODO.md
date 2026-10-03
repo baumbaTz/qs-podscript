@@ -1,7 +1,7 @@
 # TODO
 
 Cleaned up 2026-09-27: only what Batz decided to keep. Order = planned order.
-Updated 2026-10-03 (v0.34.2) - see HANDOFF.md for the overall state.
+Updated 2026-10-03 (v0.34.3) - see HANDOFF.md for the overall state.
 
 ## Next up (open points as of v0.31.2)
 - [ ] Batz: look at the episode page, quiz and voice page on a real phone
@@ -18,6 +18,11 @@ Updated 2026-10-03 (v0.34.2) - see HANDOFF.md for the overall state.
 - [ ] Batz: try the installer's server question on Windows once (hidden
       password input could only be tested on Linux; the rest of the
       Windows part was tested with PowerShell 7).
+- [ ] Batz: on the 3070 PC (CachyOS, NVIDIA driver 580+): ./install.sh
+      --gpu-speakers with 0.34.3, then "qs-podscript gpu-check" (must say
+      GPU-CHECK OK with a gpu time clearly below the cpu time) and
+      "qs-podscript speaker-bench <episode> resnet34 --cpu" vs without --cpu
+      on a full episode. Then decide: Windows GPU part, finer step (1 s).
 - [ ] Optional: CF-Connecting-IP support (only if a Cloudflare proxy is ever
       put in front of the server).
 - [ ] Dependabot PRs: merge one at a time after CI is green.
@@ -89,7 +94,7 @@ Design: docs/SPEC.md "Homeserver design".
 - [x] Reasonable default thresholds for all models (v0.28.0): real-audio
       values for ResNet34 (0.5) and TitaNet large (0.96), estimates for the
       others. Fine-tune only if one of them gets used for real.
-- [ ] Worth testing: GPU speaker detection (./install.sh --gpu-speakers on
+- [ ] Worth testing (fixed in 0.34.3, before that it never used the card): GPU speaker detection (./install.sh --gpu-speakers on
       the RTX 3070 / 1660 Super PC). Correction (v0.29.0): this is NOT a
       small gain - on the processor speaker detection takes about as long as
       whisper or longer (Batz's log: "114 voices ... in 49m16s" for one

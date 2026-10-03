@@ -1,5 +1,44 @@
 # DONE
 
+## 2026-10-03 – v0.34.3 – speaker detection on the graphics card really works
+- Found by Batz: "qs-podscript gpu-check" said "GPU-CHECK OK ... cpu=133ms
+  gpu=133ms" - but both ran on the processor. The speaker detection library
+  shipped with QS-PodScript (sherpa-onnx) is built without graphics card
+  support; it printed "Please compile with -DSHERPA_ONNX_ENABLE_GPU=ON ...
+  Fallback to cpu!" and quietly ignored the NVIDIA libraries. So
+  --gpu-speakers never sped anything up (the app itself noticed and stayed
+  on the CPU; only the check and the installer said OK).
+- install.sh --gpu-speakers now installs sherpa-onnx's own GPU build of the
+  same version (1.13.8, CUDA 13 + cuDNN 9, ONNX Runtime 1.28.2; ~255 MB,
+  sha256 pinned) instead of Microsoft's ONNX Runtime package - the library
+  that does the speaker detection, compiled with CUDA, plus its ONNX
+  Runtime. The NVIDIA libraries (CUDA 13, cuDNN 9) stay as before.
+  An existing --gpu-speakers install is replaced on the next ./install.sh
+  run (its version marker no longer matches); --no-gpu-speakers puts the
+  processor-only libraries back.
+- gpu-check runs the real test in a second process and reads everything it
+  prints: a quiet fallback to the processor is now "GPU-CHECK NO-GPU", a
+  crash while starting CUDA is reported instead of swallowed. The installer
+  no longer says "uses your NVIDIA graphics card" in that case.
+- Tested here without an NVIDIA card: the installer part downloads, checks
+  and puts everything in place; with the GPU build the check gets as far as
+  "libcuda.so.1 not found" (= the NVIDIA driver, the one thing only a real
+  card has) and the app says "NVIDIA driver missing or too old" and uses
+  the CPU; speaker detection on the CPU still works with the GPU build.
+  The speed on a real card is still to be measured.
+- Build: the Linux program only looks for its libraries in its own folder.
+  It also had the build machine's Go module folder in its search path,
+  ahead of its own folder - on a computer where that folder exists, the
+  CPU-only library from there would have won. build.sh fixes the path with
+  patchelf (now needed for building; CI installs it).
+- A test checks that install.sh downloads the same sherpa-onnx version as
+  go.mod uses.
+- Installer: newer NVIDIA drivers (e.g. 615) write "CUDA UMD Version: 13.4"
+  instead of "CUDA Version: 13.4" in nvidia-smi, so the installer read
+  "driver supports CUDA ?" and skipped the graphics card part ("needs
+  driver 580 or newer"). Both forms are read now; if neither is found, the
+  driver version decides (580+ = CUDA 13).
+
 ## 2026-10-03 – v0.34.2 – drawn scroll-button icons
 - Scroll buttons have drawn icons instead of text symbols (⤒ ↑ ↓ ⤓ ◉): double
   chevrons for a page up/down, double chevrons with a bar for top/bottom,

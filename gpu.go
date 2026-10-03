@@ -241,8 +241,8 @@ func runGPUCheck() (cudaGPUInfo, bool) {
 	text := string(out)
 	g.Detail = errorLines(text)
 	switch {
-	case strings.Contains(text, "Fallback to cpu"):
-		g.Reason = "this ONNX Runtime has no CUDA support – run the installer with --gpu-speakers again"
+	case strings.Contains(text, "GPU-CHECK NO-GPU") || strings.Contains(text, "Fallback to cpu"):
+		g.Reason = "the speaker detection library has no graphics card support – run the installer of 0.34.3 or newer with --gpu-speakers"
 	case strings.Contains(text, "GPU-CHECK OK"):
 		g.OK = true
 		g.Name = gpuName()
@@ -311,7 +311,32 @@ func gpuName() string {
 
 // cmdGPUCheck (child process): compute the same voiceprint on the CPU and the
 // graphics card and compare.
-func cmdGPUCheck() error {
+// cmdGPUCheck: "qs-podscript gpu-check" runs the real test in a second
+// process ("gpu-check --inner") and reads everything it prints: a failing
+// CUDA start can crash it, and sherpa-onnx built without GPU support only
+// prints a warning and quietly uses the processor - neither may count as OK.
+func cmdGPUCheck(args []string) error {
+	if len(args) > 0 && args[0] == "--inner" {
+		return gpuCheckInner()
+	}
+	exe, err := os.Executable()
+	if err != nil {
+		return err
+	}
+	out, runErr := exec.Command(exe, "gpu-check", "--inner").CombinedOutput()
+	text := string(out)
+	if strings.Contains(text, "Fallback to cpu") {
+		text = strings.ReplaceAll(text, "GPU-CHECK OK", "(would be OK, but ran on the processor)")
+		text += "GPU-CHECK NO-GPU the speaker detection library has no graphics card support (it fell back to the processor)\n"
+	}
+	fmt.Print(text)
+	if runErr != nil && !strings.Contains(text, "GPU-CHECK") {
+		return fmt.Errorf("the graphics card test stopped: %v", runErr)
+	}
+	return nil
+}
+
+func gpuCheckInner() error {
 	samples := checkSignal(4 * sampleRate)
 	embedWith := func(provider string) ([]float32, time.Duration, error) {
 		ex := sherpa.NewSpeakerEmbeddingExtractor(&sherpa.SpeakerEmbeddingExtractorConfig{

@@ -273,7 +273,16 @@ if command -v nvidia-smi >/dev/null && nvidia-smi >/dev/null 2>&1; then
   NV_OK=1; HAS_NVIDIA=1
   NV_NAME="$(nvidia-smi --query-gpu=name --format=csv,noheader | head -n1)"
   NV_CC="$(nvidia-smi --query-gpu=compute_cap --format=csv,noheader 2>/dev/null | head -n1 | tr -d ' .' || true)"
-  NV_DRIVER_CUDA="$(nvidia-smi | grep -oE 'CUDA Version: [0-9]+\.[0-9]+' | awk '{print $3}' || true)"
+  # header line: "CUDA Version: 13.0" (older drivers) or "CUDA UMD Version: 13.4" (newer)
+  NV_DRIVER_CUDA="$(nvidia-smi | grep -m1 -oE 'CUDA (UMD )?Version: [0-9]+\.[0-9]+' | grep -oE '[0-9]+\.[0-9]+$' || true)"
+  if [ -z "$NV_DRIVER_CUDA" ]; then # header changed again: go by the driver version
+    NV_DRIVER_VER="$(nvidia-smi --query-gpu=driver_version --format=csv,noheader 2>/dev/null | head -n1 | tr -d ' ' || true)"
+    case "${NV_DRIVER_VER%%.*}" in
+      ''|*[!0-9]*) ;;
+      *) if [ "${NV_DRIVER_VER%%.*}" -ge 580 ]; then NV_DRIVER_CUDA="13.0"
+         elif [ "${NV_DRIVER_VER%%.*}" -ge 525 ]; then NV_DRIVER_CUDA="12.0"; fi ;;
+    esac
+  fi
   ok "NVIDIA $NV_NAME (driver supports CUDA ${NV_DRIVER_CUDA:-?})"
 elif [ "$HAS_NVIDIA" = 1 ]; then
   warn "An NVIDIA card is installed, but its driver is not working (nvidia-smi fails)."
@@ -450,12 +459,18 @@ fi
 DEVICE="$(grep -E 'ok +whisper' "$LOG" | tail -n1 | sed -E 's/.*(model load|test passed)\): //')"
 
 # ------------------------------------------------------------------ speaker detection on the graphics card
-# Optional (NVIDIA only): the GPU build of the same ONNX Runtime version the
-# package ships, plus the NVIDIA libraries it needs (CUDA 13, cuDNN 9) from
-# NVIDIA's official Python packages. Kept in data/tools/onnxruntime-gpu and
-# cuda/, re-applied on every update.
-ORT_VERSION="$(cat "$INSTALL_DIR/onnxruntime-version.txt" 2>/dev/null || echo 1.28.2)"
-ORT_GPU_URL="https://github.com/microsoft/onnxruntime/releases/download/v$ORT_VERSION/onnxruntime-linux-x64-gpu_cuda13-$ORT_VERSION.tgz"
+# Optional (NVIDIA only): sherpa-onnx's own GPU build - the speaker detection
+# library compiled with CUDA support (the normal one only runs on the
+# processor and silently ignores the graphics card) together with the
+# matching ONNX Runtime 1.28.2 for CUDA 13 - plus the NVIDIA libraries it
+# needs (CUDA 13, cuDNN 9) from NVIDIA's official Python packages. Kept in
+# data/tools/onnxruntime-gpu and cuda/, re-applied on every update.
+# SHERPA_GPU_VERSION must be the sherpa-onnx-go version in go.mod (a test checks).
+SHERPA_GPU_VERSION="1.13.8"
+SHERPA_GPU_NAME="sherpa-onnx-v$SHERPA_GPU_VERSION-cuda-13.x-cudnn-9.x-onnxruntime1.28.2-linux-x64-gpu"
+SHERPA_GPU_URL="https://github.com/k2-fsa/sherpa-onnx/releases/download/v$SHERPA_GPU_VERSION/$SHERPA_GPU_NAME.tar.bz2"
+SHERPA_GPU_SHA256="7eddaee14a42d143ec995ed68e9ec3623dd6ca9d22076139d4c0879c3121c819"
+GPU_SPK_LIBS="libsherpa-onnx-c-api.so libonnxruntime.so libonnxruntime_providers_cuda.so libonnxruntime_providers_shared.so"
 GPU_SPK_DIR="$INSTALL_DIR/data/tools/onnxruntime-gpu"
 CUDA_LIB_DIR="$INSTALL_DIR/cuda"
 PYPI="https://files.pythonhosted.org/packages"
@@ -468,13 +483,17 @@ CUDA_WHEELS=(
 )
 CUDA_SONAMES="libcudart.so.13 libcublas.so.13 libcublasLt.so.13 libcurand.so.10 libcudnn.so.9 libnvrtc.so.13"
 
-gpu_spk_remove() {
+gpu_spk_remove() { # back to the processor-only libraries of the package
   rm -f "$INSTALL_DIR"/libonnxruntime_providers_*.so
-  [ -f "$SRC/libonnxruntime.so" ] && cp -f "$SRC/libonnxruntime.so" "$INSTALL_DIR/"
+  local f
+  for f in libonnxruntime.so libsherpa-onnx-c-api.so; do
+    [ -f "$SRC/$f" ] && cp -f "$SRC/$f" "$INSTALL_DIR/"
+  done
   rm -rf "$GPU_SPK_DIR" "$CUDA_LIB_DIR"
 }
 gpu_spk_apply() {
-  cp -f "$GPU_SPK_DIR/libonnxruntime.so" "$GPU_SPK_DIR"/libonnxruntime_providers_cuda.so "$GPU_SPK_DIR"/libonnxruntime_providers_shared.so "$INSTALL_DIR/"
+  local f
+  for f in $GPU_SPK_LIBS; do cp -f "$GPU_SPK_DIR/$f" "$INSTALL_DIR/"; done
 }
 system_has_cuda13() {
   local l; l="$(ldconfig -p 2>/dev/null || true)"
@@ -482,16 +501,20 @@ system_has_cuda13() {
 }
 gpu_spk_install() {
   local tmp; tmp="$(mktemp -d)"
-  if [ "$(cat "$GPU_SPK_DIR/version.txt" 2>/dev/null)" != "$ORT_VERSION" ]; then
-    info "Downloading ONNX Runtime $ORT_VERSION for NVIDIA graphics cards (about 240 MB)"
-    run curl -fL --retry 3 -o "$tmp/ort.tgz" "$ORT_GPU_URL" || { rm -rf "$tmp"; warn "Download failed."; return 1; }
-    run tar -C "$tmp" -xzf "$tmp/ort.tgz" || { rm -rf "$tmp"; warn "Unpacking failed."; return 1; }
-    local lib; lib="$(find "$tmp" -type d -name lib | head -n1)"
+  if [ "$(cat "$GPU_SPK_DIR/version.txt" 2>/dev/null)" != "$SHERPA_GPU_NAME" ]; then
+    info "Downloading the speaker detection libraries for NVIDIA graphics cards (about 255 MB)"
+    run curl -fL --retry 3 -o "$tmp/sherpa-gpu.tar.bz2" "$SHERPA_GPU_URL" || { rm -rf "$tmp"; warn "Download failed: $SHERPA_GPU_URL"; return 1; }
+    echo "$SHERPA_GPU_SHA256  $tmp/sherpa-gpu.tar.bz2" | sha256sum -c - >> "$LOG" 2>&1 ||
+      { rm -rf "$tmp"; warn "Checksum mismatch: $SHERPA_GPU_URL"; return 1; }
+    command -v bzip2 >/dev/null || pkg_install bzip2 || true
+    run tar -C "$tmp" -xjf "$tmp/sherpa-gpu.tar.bz2" "$SHERPA_GPU_NAME/lib" || { rm -rf "$tmp"; warn "Unpacking failed."; return 1; }
     rm -rf "$GPU_SPK_DIR"; mkdir -p "$GPU_SPK_DIR"
-    cp -f "$lib/libonnxruntime.so.$ORT_VERSION" "$GPU_SPK_DIR/libonnxruntime.so" &&
-      cp -f "$lib/libonnxruntime_providers_cuda.so" "$lib/libonnxruntime_providers_shared.so" "$GPU_SPK_DIR/" ||
-      { rm -rf "$tmp" "$GPU_SPK_DIR"; warn "The ONNX Runtime archive looks different than expected."; return 1; }
-    echo "$ORT_VERSION" > "$GPU_SPK_DIR/version.txt"
+    local f
+    for f in $GPU_SPK_LIBS; do
+      cp -f "$tmp/$SHERPA_GPU_NAME/lib/$f" "$GPU_SPK_DIR/" ||
+        { rm -rf "$tmp" "$GPU_SPK_DIR"; warn "The sherpa-onnx archive looks different than expected ($f missing)."; return 1; }
+    done
+    echo "$SHERPA_GPU_NAME" > "$GPU_SPK_DIR/version.txt"
   fi
   if system_has_cuda13; then
     rm -rf "$CUDA_LIB_DIR"
@@ -545,7 +568,7 @@ else
     if gpu_spk_install; then
       CHECK="$("$INSTALL_DIR/qs-podscript" gpu-check 2>&1 || true)"
       echo "$CHECK" >> "$LOG"
-      if grep -q "GPU-CHECK OK" <<<"$CHECK"; then
+      if grep -q "GPU-CHECK OK" <<<"$CHECK" && ! grep -q "Fallback to cpu" <<<"$CHECK"; then
         ok "Speaker detection uses your NVIDIA graphics card ($(grep -o 'cpu=[0-9]*ms gpu=[0-9]*ms' <<<"$CHECK"))"
       else
         warn "The graphics card test for speaker detection failed - QS-PodScript uses the processor instead."

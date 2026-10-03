@@ -14,7 +14,7 @@ import (
 	"time"
 )
 
-const version = "0.34.2"
+const version = "0.34.3"
 
 const usageText = `QS-PodScript ` + version + ` - podcast transcription with speaker detection
 
@@ -122,7 +122,7 @@ func main() {
 	case "config":
 		err = cmdConfig(args[1:])
 	case "gpu-check":
-		err = cmdGPUCheck()
+		err = cmdGPUCheck(args[1:])
 	case "diarize-file":
 		err = cmdDiarizeFile(args[1:])
 	case "speaker-bench":

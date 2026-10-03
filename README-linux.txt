@@ -24,9 +24,12 @@ SPEAKER DETECTION ON THE GRAPHICS CARD (optional, NVIDIA only)
   ./install.sh --gpu-speakers
   Speaker detection (telling voices apart) normally runs on the processor and
   takes about as long as the transcription. With this option the installer
-  adds the NVIDIA build of ONNX Runtime and the NVIDIA libraries it needs
+  adds sherpa-onnx's graphics-card build (the speaker detection library with
+  CUDA support, plus its ONNX Runtime) and the NVIDIA libraries it needs
   (CUDA 13, cuDNN 9 - about 1.3 GB download, 2 GB on disk, kept inside the
-  QS-PodScript folder). Needs NVIDIA driver 580 or newer (nvidia-smi shows
+  QS-PodScript folder). Before 0.34.3 this option installed a library
+  without graphics card support - run it again to get the working one.
+  Check: qs-podscript gpu-check (prints the times on CPU and graphics card). Needs NVIDIA driver 580 or newer (nvidia-smi shows
   "CUDA Version: 13.x"). QS-PodScript tests it at every start and uses the
   processor whenever it doesn't work. Remove it: ./install.sh --no-gpu-speakers
   Compare speed and voice models on one episode (nothing is saved):

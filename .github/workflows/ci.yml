@@ -35,7 +35,7 @@ jobs:
         with:
           go-version-file: go.mod
       - name: MinGW
-        run: sudo apt-get update && sudo apt-get install -y gcc-mingw-w64-x86-64 g++-mingw-w64-x86-64
+        run: sudo apt-get update && sudo apt-get install -y gcc-mingw-w64-x86-64 g++-mingw-w64-x86-64 patchelf
       - name: Build qs-podscript.exe
         env:
           CGO_ENABLED: "1"
