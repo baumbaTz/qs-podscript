@@ -1,7 +1,7 @@
 # TODO
 
 Cleaned up 2026-09-27: only what Batz decided to keep. Order = planned order.
-Updated 2026-10-03 (v0.34.0) - see HANDOFF.md for the overall state.
+Updated 2026-10-03 (v0.34.1) - see HANDOFF.md for the overall state.
 
 ## Next up (open points as of v0.31.2)
 - [ ] Batz: look at the episode page, quiz and voice page on a real phone

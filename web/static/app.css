@@ -918,7 +918,10 @@ details.inline-details[open] { display: block; margin-top: .4rem; }
 /* special buttons keep their own shape in this look */
 :root[data-look="quicksack"] .pagenav button { background: transparent; border: 0; padding: 0; color: var(--ink); font-size: 1.05rem; }
 :root[data-look="quicksack"] .pagenav button:hover { background: var(--qs-hover2); }
-:root[data-look="quicksack"] .pagenav:not(.themenav) { background: var(--qs-pop); border: 1px solid var(--qs-pop-line); }
+/* scroll buttons: the opposite of the page (bright bar in dark mode, dark in bright), like Classic */
+:root[data-look="quicksack"] .pagenav:not(.themenav) { background: var(--ink); border: 1px solid var(--ink); }
+:root[data-look="quicksack"] .pagenav:not(.themenav) button { color: var(--paper); }
+:root[data-look="quicksack"] .pagenav:not(.themenav) button:hover { background: color-mix(in srgb, var(--paper) 18%, transparent); }
 :root[data-look="quicksack"] button.chip-btn { background: transparent; color: var(--ink); border: 1px solid var(--qs-chip-line); border-radius: 999px; padding: .22rem .75rem; font-size: .9rem; font-weight: 500; }
 :root[data-look="quicksack"] button.chip-btn:hover { border-color: var(--c, var(--ink)); background: transparent; }
 :root[data-look="quicksack"] button.danger { background: transparent; color: var(--err); border-color: var(--err); }

@@ -1,5 +1,18 @@
 # DONE
 
+## 2026-10-03 – v0.34.1 – page descriptions describe QS-PodScript, scroll bar colours
+- The meta description (search results, link previews) is now the same on
+  every page and says what QS-PodScript is: "QS-PodScript turns podcast
+  episodes into transcripts that show who said what: speaker detection,
+  voice recognition, full-text search and the audio to listen along. Free
+  and open source." It no longer lists the server's podcasts, episode
+  counts or the first words of an episode.
+- Unchanged: titles and pictures still say which podcast / episode a link
+  is about (cover art on podcast and episode pages, the banner elsewhere).
+- QuickSack: the scroll buttons on the right are drawn in the opposite of
+  the page again, like in Classic - a bright bar in dark mode, a dark bar in
+  bright mode (they had the panel colour, so they blended in).
+
 ## 2026-10-03 – v0.34.0 – connect to a server while installing
 - Installers can connect the computer to a shared server - the same as
   Setup -> "Where you work" -> "Add a server" (the Setup page is unchanged).
