@@ -2,6 +2,8 @@ package main
 
 import (
 	"io/fs"
+	"net/http"
+	"net/http/httptest"
 	"regexp"
 	"strings"
 	"testing"
@@ -54,6 +56,21 @@ func TestBarClass(t *testing.T) {
 	}{{0, "p0"}, {37, "p37"}, {-1, "p0"}, {250, "p100"}, {49.6, "p50"}, {int64(12), "p12"}, {"x", "p0"}} {
 		if got := f(c.in); got != c.want {
 			t.Errorf("barClass(%v) = %s, want %s", c.in, got, c.want)
+		}
+	}
+}
+
+func TestStaticCaching(t *testing.T) {
+	h := staticFiles(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
+	for path, want := range map[string]string{
+		"/static/app.css?v=0.31.2":                    "public, max-age=31536000, immutable",
+		"/static/fonts/oswald-latin-500-normal.woff2": "public, max-age=31536000, immutable",
+		"/static/app.css":                             "public, max-age=300",
+	} {
+		w := httptest.NewRecorder()
+		h.ServeHTTP(w, httptest.NewRequest("GET", path, nil))
+		if got := w.Header().Get("Cache-Control"); got != want {
+			t.Errorf("%s: Cache-Control %q, want %q", path, got, want)
 		}
 	}
 }

@@ -6,6 +6,10 @@
 <title>{{.Title}} – QS-PodScript</title>
 <script src="/static/theme.js?v={{.Version}}"></script>
 <link rel="stylesheet" href="/static/app.css?v={{.Version}}">
+{{if eq .Look "quicksack"}}<link rel="preload" href="/static/fonts/source-sans-3-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="/static/fonts/source-sans-3-latin-600-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="/static/fonts/oswald-latin-500-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="/static/fonts/oswald-latin-600-normal.woff2" as="font" type="font/woff2" crossorigin>{{end}}
 <script src="/static/app.js?v={{.Version}}" defer></script>
 </head>
 <body>

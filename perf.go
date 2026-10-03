@@ -111,7 +111,9 @@ func (g *gzipWriter) close() {
 // with ?v=<version>, so the browser may keep them.
 func staticFiles(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Query().Get("v") != "" {
+		// ?v=<version> changes with every release; font files never change
+		// under the same name (a new font version gets a new file name)
+		if r.URL.Query().Get("v") != "" || strings.HasPrefix(r.URL.Path, "/static/fonts/") {
 			w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
 		} else {
 			w.Header().Set("Cache-Control", "public, max-age=300")

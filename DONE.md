@@ -1,5 +1,16 @@
 # DONE
 
+## 2026-10-03 – v0.31.3 – faster first load (PageSpeed)
+- QuickSack look: the four fonts it uses are preloaded in the page head, so
+  the browser fetches them together with app.css instead of only after it
+  (critical chain page -> CSS -> fonts becomes page -> CSS + fonts). The
+  Classic look uses system fonts and preloads nothing.
+- Font files (/static/fonts/) are cached for a year (were 5 minutes) - a
+  font never changes under the same file name.
+- Not changed: app.css stays a separate file ("render-blocking"). Inlining
+  it would break the strict CSP and caching; after the first visit it comes
+  from the browser cache (a year, versioned with ?v=).
+
 ## 2026-10-03 – v0.31.2 – phones checked, server install in one step, strict CSP possible
 - Phones: checked the remaining pages at 412 px (episode, Look Who's Talking
   Now, voice page, Setup, people; logged in, logged out and the local app).
