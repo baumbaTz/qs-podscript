@@ -1,5 +1,11 @@
 # DONE
 
+## 2026-10-03 – v0.34.2 – drawn scroll-button icons
+- Scroll buttons have drawn icons instead of text symbols (⤒ ↑ ↓ ⤓ ◉): double
+  chevrons for a page up/down, double chevrons with a bar for top/bottom,
+  a ring with a dot for "to the part that is playing". Small inline SVGs in
+  the text colour - sharp at any size, same in both looks, CSP-safe.
+
 ## 2026-10-03 – v0.34.1 – page descriptions describe QS-PodScript, scroll bar colours
 - The meta description (search results, link previews) is now the same on
   every page and says what QS-PodScript is: "QS-PodScript turns podcast

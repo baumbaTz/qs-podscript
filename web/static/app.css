@@ -448,7 +448,7 @@ button.switch.failed .track { background: var(--err); }
 .manual .demo-lc { text-decoration: underline dotted var(--ink-soft); text-underline-offset: 3px; font-weight: 400; }
 .manual section { scroll-margin-top: 4.5rem; }
 .manual .toc li { margin: 0 0 .3rem; break-inside: avoid; }
-.themenav button svg { display: block; margin: auto; }
+.themenav button svg, .pagenav button svg { display: block; margin: auto; pointer-events: none; }
 /* the theme button looks like the mode it switches to */
 .themenav.to-light { background: #F5F6F8; border-color: #858E9C; }
 .themenav.to-light button { color: #1E2430; }
