@@ -14,7 +14,7 @@ import (
 	"time"
 )
 
-const version = "0.32.0"
+const version = "0.33.0"
 
 const usageText = `QS-PodScript ` + version + ` - podcast transcription with speaker detection
 

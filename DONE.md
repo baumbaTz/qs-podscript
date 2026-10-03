@@ -1,5 +1,31 @@
 # DONE
 
+## 2026-10-03 – v0.33.0 – logo, link previews, search engines
+- Logo: a red rounded square with a white speech bubble saying "QSP" (the
+  P in red), so it's recognisable without the name next to it. Own
+  design, web/static/logo.svg; the letters are Oswald SemiBold turned
+  into outlines (no font needed, SIL OFL). In the header in front of the
+  name (both looks), as the browser tab icon (SVG + favicon.ico 16/32/48),
+  and as the home-screen icon on phones (icon-180.png).
+- Link previews (Discord, Slack, WhatsApp, Mastodon, X ...): every page has
+  Open Graph and twitter:card tags. Podcast and episode links show the
+  podcast's cover art, the podcast name and a description; episodes also
+  quote the first words of the transcript (ads left out). Other pages show
+  a 1200x630 QS-PodScript banner (web/static/og.png). Embed colour
+  (theme-color) is the look's accent.
+- Search engines: description and canonical address on the public pages
+  (overview, podcasts, transcribed episodes, manual); everything else -
+  login, search results, quiz, setup, untranscribed episodes - says
+  noindex. /robots.txt keeps crawlers out of audio, API and admin pages and
+  points to /sitemap.xml (overview, manual, every podcast and every
+  transcribed episode). The local app tells search engines to stay away
+  completely.
+- Page titles: the overview is "QS-PodScript – podcast transcripts",
+  episodes include the podcast ("Episode – Podcast – QS-PodScript").
+- Addresses in the tags come from the address the visitor used (Host and
+  X-Forwarded-Proto from the reverse proxy), so they are https://... behind
+  Traefik.
+
 ## 2026-10-03 – v0.32.0 – QuickSack is the default look, now also bright
 - QuickSack (the quicksack.li style) is the default look. Installs where a
   look was saved in Setup → Look keep theirs; Classic stays available.

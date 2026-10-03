@@ -1035,3 +1035,6 @@ table.episodes th.num, table.episodes td.num { text-align: right; white-space: n
 @media (pointer: coarse), (max-width: 760px) {
   main :is(button, .button, select, input[type=submit]):not(.lane-name):not(.place-opt) { min-height: 34px; }
 }
+/* logo in front of the name, as tall as the name's capitals */
+.brand { display: inline-flex; align-items: center; gap: .45em; }
+.brand-logo { width: 1.2em; height: 1.2em; flex: none; display: block; border-radius: 22%; }

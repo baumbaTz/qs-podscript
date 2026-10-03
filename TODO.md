@@ -1,7 +1,7 @@
 # TODO
 
 Cleaned up 2026-09-27: only what Batz decided to keep. Order = planned order.
-Updated 2026-10-03 (v0.32.0) - see HANDOFF.md for the overall state.
+Updated 2026-10-03 (v0.33.0) - see HANDOFF.md for the overall state.
 
 ## Next up (open points as of v0.31.2)
 - [ ] Batz: look at the episode page, quiz and voice page on a real phone
@@ -11,6 +11,10 @@ Updated 2026-10-03 (v0.32.0) - see HANDOFF.md for the overall state.
       from README-linux.txt to the Traefik secure-headers middleware.
 - [ ] Batz: look at QuickSack bright mode on the real server (button bottom
       left) and say if any colour should change.
+- [ ] Batz: post a podcast/episode link in Discord and check the preview
+      (Discord caches previews - test with a link it hasn't seen yet).
+      Optional: submit https://transcribe.quicksack.li/sitemap.xml in
+      Google Search Console.
 - [ ] Optional: CF-Connecting-IP support (only if a Cloudflare proxy is ever
       put in front of the server).
 - [ ] Dependabot PRs: merge one at a time after CI is green.

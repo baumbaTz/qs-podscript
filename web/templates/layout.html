@@ -3,7 +3,23 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>{{.Title}} – QS-PodScript</title>
+<title>{{.Meta.DocTitle}}</title>
+<meta name="description" content="{{.Meta.Description}}">
+{{if .Meta.Index}}<link rel="canonical" href="{{.Meta.URL}}">{{else}}<meta name="robots" content="noindex, nofollow">{{end}}
+<meta name="theme-color" content="{{.Meta.ThemeColor}}">
+<meta property="og:site_name" content="QS-PodScript">
+<meta property="og:type" content="{{.Meta.Type}}">
+<meta property="og:title" content="{{.Meta.Title}}">
+<meta property="og:description" content="{{.Meta.Description}}">
+<meta property="og:url" content="{{.Meta.URL}}">
+<meta property="og:image" content="{{.Meta.Image}}">
+<meta property="og:image:alt" content="{{.Meta.ImageAlt}}">
+{{if .Meta.LargeImage}}<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">{{else}}<meta name="twitter:card" content="summary">{{end}}
+<link rel="icon" href="/static/logo.svg?v={{.Version}}" type="image/svg+xml">
+<link rel="icon" href="/favicon.ico" sizes="48x48">
+<link rel="apple-touch-icon" href="/static/icon-180.png?v={{.Version}}">
 <script src="/static/theme.js?v={{.Version}}"></script>
 <link rel="stylesheet" href="/static/app.css?v={{.Version}}">
 {{if eq .Look "quicksack"}}<link rel="preload" href="/static/fonts/source-sans-3-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
@@ -15,7 +31,7 @@
 <body>
 <header class="top">
   <div class="brandbox">
-    <a class="brand" href="{{.ContentBase}}/">QS-PodScript{{if and .ServerMode (not .Places)}} <span class="brand-server" title="These pages belong to the shared server">Server</span>{{end}}</a>
+    <a class="brand" href="{{.ContentBase}}/"><img class="brand-logo" src="/static/logo.svg?v={{.Version}}" alt="" width="24" height="24">QS-PodScript{{if and .ServerMode (not .Places)}} <span class="brand-server" title="These pages belong to the shared server">Server</span>{{end}}</a>
     {{if .Places}}{{template "placemenu" .}}{{end}}
   </div>
   <div class="top-tools"><button type="button" class="theme-mini" id="themebtn2" hidden></button></div>

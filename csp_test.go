@@ -74,3 +74,22 @@ func TestStaticCaching(t *testing.T) {
 		}
 	}
 }
+
+func TestMetaHelpers(t *testing.T) {
+	if got := plural(1234, "episode", "episodes"); got != "1,234 episodes" {
+		t.Errorf("plural: %q", got)
+	}
+	if got := plural(1, "episode", "episodes"); got != "1 episode" {
+		t.Errorf("plural: %q", got)
+	}
+	us := []Utterance{{Text: "Buy socks.", Mark: "ad"}, {Text: "Welcome back to the show, everybody"}, {Text: "and today we talk about a very long film indeed"}}
+	if got := firstWords(us, 40); got != "Welcome back to the show, everybody and …" {
+		t.Errorf("firstWords: %q", got)
+	}
+	r := httptest.NewRequest("GET", "/episodes/1?hl=x", nil)
+	r.Host = "transcribe.example.org"
+	r.Header.Set("X-Forwarded-Proto", "https")
+	if got := origin(r); got != "https://transcribe.example.org" {
+		t.Errorf("origin: %q", got)
+	}
+}

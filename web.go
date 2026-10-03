@@ -307,6 +307,7 @@ type pageData struct {
 	Look          string      // look.go
 	Helpers       *helperWork // server that leaves the transcribing to helpers' computers
 	Here          string      // this page's path (return address of forms)
+	Meta          pageMeta    // meta.go: description, link preview, indexing
 }
 
 // IsAdmin / CanEdit decide what the page shows (local mode: everything).
@@ -368,6 +369,7 @@ func (s *Server) render(w http.ResponseWriter, r *http.Request, page, title, nav
 		}
 	}
 	pd.Look = s.lookFor(r, pd.ViaLocal != "")
+	pd.Meta = s.buildMeta(r, page, title, pd.Look, data)
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	if err := t.ExecuteTemplate(w, "layout", pd); err != nil {
 		debugf("render %s: %v", page, err)
@@ -405,6 +407,9 @@ func (s *Server) routes() http.Handler {
 	mux.Handle("GET /static/", staticFiles(http.StripPrefix("/static/", http.FileServer(http.FS(static)))))
 
 	mux.HandleFunc("GET /{$}", s.guard(accessPublic, s.handleHome))
+	mux.HandleFunc("GET /robots.txt", s.handleRobots)
+	mux.HandleFunc("GET /sitemap.xml", s.handleSitemap)
+	mux.HandleFunc("GET /favicon.ico", s.handleFavicon)
 	mux.HandleFunc("GET /setup", s.guard(accessAdmin, s.handleSetupPage))
 	mux.HandleFunc("POST /setup", s.guard(accessAdmin, s.handleSetupStart))
 	mux.HandleFunc("POST /settings/speakers", s.guard(accessAdmin, s.handleSpeakerSettings))
