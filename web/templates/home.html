@@ -32,7 +32,7 @@
       <div class="feed-main">
       <a class="feed-title" href="/feeds/{{.ID}}">{{.Title}}</a>
       <div class="progress-line">
-        <div class="meter small"><span style="width:{{if .Total}}{{printf "%.1f" (pctOf .Done .Total)}}{{else}}0{{end}}%"></span></div>
+        <div class="meter small"><span class="{{barClass (pctOf .Done .Total)}}"></span></div>
         <span>{{.Done}} of {{.Total}} transcribed{{if .Failed}}, <a href="/feeds/{{.ID}}?show=failed">{{.Failed}} failed</a>{{end}}</span>
       </div>
       </div>

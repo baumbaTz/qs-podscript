@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{{.Title}} – QS-PodScript</title>
-<script>try { var t = localStorage.getItem("qs-podscript-theme") || localStorage.getItem("podscribe-theme"); if (t === "light" || t === "dark") document.documentElement.dataset.theme = t; } catch (e) {}</script>
+<script src="/static/theme.js?v={{.Version}}"></script>
 <link rel="stylesheet" href="/static/app.css?v={{.Version}}">
 <script src="/static/app.js?v={{.Version}}" defer></script>
 </head>
@@ -89,7 +89,7 @@
     <span class="job-stage" id="job-stage"></span>
   </div>
   <a class="job-ep" id="job-ep"></a>
-  <div class="meter" id="job-meter" hidden><span id="job-bar" style="width:100%"></span></div>
+  <div class="meter" id="job-meter" hidden><span id="job-bar" class="p100"></span></div>
   <p class="job-err" id="job-err" hidden></p>
   <div class="job-actions">
     <form method="post" action="/_local/queue/start" id="job-start" hidden>
@@ -112,7 +112,7 @@
     <span class="job-stage" id="job-stage">{{.Status.Stage}}</span>
   </div>
   <a class="job-ep" id="job-ep" href="{{if .Status.EpisodeID}}/episodes/{{.Status.EpisodeID}}{{end}}">{{.Status.EpisodeTitle}}</a>
-  <div class="meter" id="job-meter" {{if eq .Status.Job ""}}hidden{{end}}><span id="job-bar" style="width:{{if ge .Status.Pct 0}}{{.Status.Pct}}{{else}}100{{end}}%" class="{{if lt .Status.Pct 0}}busy{{end}}"></span></div>
+  <div class="meter" id="job-meter" {{if eq .Status.Job ""}}hidden{{end}}><span id="job-bar" class="{{if lt .Status.Pct 0}}busy p100{{else}}{{barClass .Status.Pct}}{{end}}"></span></div>
   <p class="job-err" id="job-err" {{if not .Status.LastError}}hidden{{end}}>{{.Status.LastError}}</p>
   <div class="job-actions">
     <form method="post" action="/queue/start" id="job-start" {{if ne .Status.Job ""}}hidden{{end}}>

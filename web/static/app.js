@@ -260,6 +260,8 @@
   let menuStart = null;
   function openMenu(opts, rect) {
     $("assign-what").textContent = opts.what;
+    const vl = $("a-voice-link");
+    if (vl) { vl.hidden = !opts.voiceHref; if (opts.voiceHref) vl.href = opts.voiceHref; }
     menuStart = opts.kind === "range" ? Number(opts.start) : null;
     const pb = $("a-play");
     if (pb) pb.hidden = menuStart === null || !$("audio");
@@ -392,13 +394,15 @@
     transcript.addEventListener("touchend", () => setTimeout(onSelect, 300));
   }
 
-  // click a speaker name in the lanes -> merge the whole speaker
+  // click a speaker name in the lanes -> name the whole voice at once; the
+  // menu links to the line-by-line page (without JS the name is that link)
   if (lanes && menu) {
     lanes.addEventListener("click", (e) => {
-      const name = e.target.closest("button.lane-name");
+      const name = e.target.closest("a.lane-name[data-label]");
       if (!name) return;
+      e.preventDefault();
       openMenu({
-        kind: "merge", from: name.dataset.label,
+        kind: "merge", from: name.dataset.label, voiceHref: name.href,
         what: "Everything said by " + name.firstChild.textContent.trim() + " is actually:",
       }, name.getBoundingClientRect());
     });
@@ -507,13 +511,16 @@
     };
     refresh();
     const replay = $("quiz-replay");
-    replay.hidden = false;
+    if (replay) replay.hidden = false;
+    const rowStop = qform.dataset.rowStop === "1"; // voice page: lines are far apart, stop after each
+    let stopAt = 0;
     const playFrom = (sec) => { qa.currentTime = sec; qa.play(); };
-    replay.addEventListener("click", () => playFrom(from));
+    if (replay) replay.addEventListener("click", () => playFrom(from));
     let curRow = null, curW = null, qraf = 0;
     const qtime = () => {
       const t = qa.currentTime, ms = t * 1000;
       if (t >= to && !qa.paused) qa.pause(); // some browsers ignore the fragment end after seeking
+      if (stopAt && t >= stopAt && !qa.paused) { qa.pause(); stopAt = 0; } // voice page: just this line
       const row = rows.find((r) => ms >= Number(r.dataset.s) - 150 && ms <= Number(r.dataset.e) + 150) || null;
       if (row !== curRow) { if (curRow) curRow.classList.remove("now"); if (row) row.classList.add("now"); curRow = row; }
       const w = words.find((x) => ms >= Number(x.dataset.s) && ms <= Number(x.dataset.e) + 150) || null;
@@ -581,8 +588,20 @@
         } else if (e.target.type === "radio") { sel.value = ""; r.classList.remove("other"); }
       });
       r.addEventListener("click", (e) => {
+        const cp = e.target.closest(".ctx-play[data-from]");
+        if (cp) {
+          e.preventDefault();
+          stopAt = Number(cp.dataset.to) / 1000 + 0.4;
+          playFrom(Math.max(from, Number(cp.dataset.from) / 1000 - 0.3));
+          return;
+        }
         const ts = e.target.closest(".ts[data-seek]");
-        if (ts) { e.preventDefault(); playFrom(Math.max(from, Number(ts.dataset.seek) / 1000 - 0.3)); return; }
+        if (ts) {
+          e.preventDefault();
+          stopAt = rowStop ? Number(r.dataset.e) / 1000 + 0.4 : 0;
+          playFrom(Math.max(from, Number(ts.dataset.seek) / 1000 - 0.3));
+          return;
+        }
         const w = e.target.closest(".text span[data-s]");
         if (w) split(r, w);
       });

@@ -132,6 +132,42 @@ html { scroll-padding-top: 4rem; }
 .meter span { display: block; height: 100%; background: var(--meter); transition: width .4s ease; }
 .meter span.busy { background: repeating-linear-gradient(90deg, var(--meter) 0 12px, transparent 12px 20px); animation: slide 1s linear infinite; background-size: 40px 100%; }
 .meter.small { height: 4px; width: 140px; margin: 0; }
+/* bar widths as classes (barClass in web.go): no inline styles, so a strict
+   Content-Security-Policy works; app.js sets element.style while running */
+.meter .p0 { width: 0%; } .meter .p1 { width: 1%; } .meter .p2 { width: 2%; }
+.meter .p3 { width: 3%; } .meter .p4 { width: 4%; } .meter .p5 { width: 5%; }
+.meter .p6 { width: 6%; } .meter .p7 { width: 7%; } .meter .p8 { width: 8%; }
+.meter .p9 { width: 9%; } .meter .p10 { width: 10%; } .meter .p11 { width: 11%; }
+.meter .p12 { width: 12%; } .meter .p13 { width: 13%; } .meter .p14 { width: 14%; }
+.meter .p15 { width: 15%; } .meter .p16 { width: 16%; } .meter .p17 { width: 17%; }
+.meter .p18 { width: 18%; } .meter .p19 { width: 19%; } .meter .p20 { width: 20%; }
+.meter .p21 { width: 21%; } .meter .p22 { width: 22%; } .meter .p23 { width: 23%; }
+.meter .p24 { width: 24%; } .meter .p25 { width: 25%; } .meter .p26 { width: 26%; }
+.meter .p27 { width: 27%; } .meter .p28 { width: 28%; } .meter .p29 { width: 29%; }
+.meter .p30 { width: 30%; } .meter .p31 { width: 31%; } .meter .p32 { width: 32%; }
+.meter .p33 { width: 33%; } .meter .p34 { width: 34%; } .meter .p35 { width: 35%; }
+.meter .p36 { width: 36%; } .meter .p37 { width: 37%; } .meter .p38 { width: 38%; }
+.meter .p39 { width: 39%; } .meter .p40 { width: 40%; } .meter .p41 { width: 41%; }
+.meter .p42 { width: 42%; } .meter .p43 { width: 43%; } .meter .p44 { width: 44%; }
+.meter .p45 { width: 45%; } .meter .p46 { width: 46%; } .meter .p47 { width: 47%; }
+.meter .p48 { width: 48%; } .meter .p49 { width: 49%; } .meter .p50 { width: 50%; }
+.meter .p51 { width: 51%; } .meter .p52 { width: 52%; } .meter .p53 { width: 53%; }
+.meter .p54 { width: 54%; } .meter .p55 { width: 55%; } .meter .p56 { width: 56%; }
+.meter .p57 { width: 57%; } .meter .p58 { width: 58%; } .meter .p59 { width: 59%; }
+.meter .p60 { width: 60%; } .meter .p61 { width: 61%; } .meter .p62 { width: 62%; }
+.meter .p63 { width: 63%; } .meter .p64 { width: 64%; } .meter .p65 { width: 65%; }
+.meter .p66 { width: 66%; } .meter .p67 { width: 67%; } .meter .p68 { width: 68%; }
+.meter .p69 { width: 69%; } .meter .p70 { width: 70%; } .meter .p71 { width: 71%; }
+.meter .p72 { width: 72%; } .meter .p73 { width: 73%; } .meter .p74 { width: 74%; }
+.meter .p75 { width: 75%; } .meter .p76 { width: 76%; } .meter .p77 { width: 77%; }
+.meter .p78 { width: 78%; } .meter .p79 { width: 79%; } .meter .p80 { width: 80%; }
+.meter .p81 { width: 81%; } .meter .p82 { width: 82%; } .meter .p83 { width: 83%; }
+.meter .p84 { width: 84%; } .meter .p85 { width: 85%; } .meter .p86 { width: 86%; }
+.meter .p87 { width: 87%; } .meter .p88 { width: 88%; } .meter .p89 { width: 89%; }
+.meter .p90 { width: 90%; } .meter .p91 { width: 91%; } .meter .p92 { width: 92%; }
+.meter .p93 { width: 93%; } .meter .p94 { width: 94%; } .meter .p95 { width: 95%; }
+.meter .p96 { width: 96%; } .meter .p97 { width: 97%; } .meter .p98 { width: 98%; }
+.meter .p99 { width: 99%; } .meter .p100 { width: 100%; }
 @keyframes slide { from { background-position: 0 0; } to { background-position: 40px 0; } }
 
 /* ---------- layout */
@@ -233,7 +269,8 @@ table { width: 100%; border-collapse: collapse; }
 .lane-name { font-size: .8rem; font-weight: 600; color: var(--c); white-space: nowrap; }
 .lane-name small { font-weight: 400; color: var(--ink-soft); }
 .lane-track { position: relative; height: 12px; background: color-mix(in srgb, var(--c) 10%, transparent); border-radius: 2px; cursor: pointer; }
-.lane-track i { position: absolute; top: 0; bottom: 0; background: var(--c); }
+.lane-blocks { position: absolute; inset: 0; width: 100%; height: 100%; display: block; overflow: visible; }
+.lane-blocks rect { fill: var(--c); }
 .playhead { position: absolute; top: -4px; bottom: -4px; width: 2px; background: var(--ink); pointer-events: none; }
 
 /* ---------- transcript */
@@ -316,7 +353,7 @@ body:not(:has(.player)) .pagenav { bottom: 24px; }
   main { padding: 1.25rem 1rem 7rem; }
   .top { padding-left: 1rem; padding-right: 1rem; }
   /* the floating buttons are narrower here: just enough room for them */
-  body:has(#pagenav:not([hidden])) :is(main, .top) { padding-right: 46px; }
+  body:has(#pagenav:not([hidden])) :is(main, .top) { padding-right: 52px; }
   body:has(#pagenav:not([hidden])) .top { padding-right: 1rem; }
   body:has(#themenav:not([hidden])) :is(main, .top) { padding-left: 1rem; }
   .top.compact { grid-template-columns: auto 1fr; gap: .25rem .75rem; }
@@ -348,8 +385,8 @@ body:not(:has(.player)) .pagenav { bottom: 24px; }
   font: 700 .68rem var(--ui); letter-spacing: .04em; text-transform: uppercase; color: var(--m);
   border: 1px solid var(--m); border-radius: 3px; padding: 0 .3rem; margin-right: .4rem; vertical-align: .1em;
 }
-.markfilter { display: flex; gap: 1.25rem; font-size: .85rem; color: var(--ink-soft); margin: -.5rem 0 1rem; }
-.markfilter label { display: inline-flex; gap: .35rem; align-items: center; cursor: pointer; }
+.markfilter { display: flex; flex-wrap: wrap; gap: .4rem 1.25rem; font-size: .85rem; color: var(--ink-soft); margin: -.5rem 0 1rem; }
+.markfilter label { display: inline-flex; gap: .35rem; align-items: center; cursor: pointer; white-space: nowrap; }
 body:has(#hide-ads:checked) .u.mark-ad, body:has(#hide-clips:checked) .u.mark-clip { display: none; }
 .assign-mark { display: flex; flex-wrap: wrap; gap: .35rem; align-items: center; border-top: 1px solid var(--rule); margin-top: .75rem; padding-top: .6rem; }
 .assign-mark span { font-weight: 600; margin-right: .2rem; }
@@ -931,4 +968,9 @@ table.episodes th.num, table.episodes td.num { text-align: right; white-space: n
   .top.compact .job-line { min-width: 0; flex-direction: row; }
   .top.compact .helpers .job-state { display: none; }
   .top.compact .job-stage { white-space: nowrap; }
+}
+
+/* phones and tablets: buttons and lists big enough for a thumb */
+@media (pointer: coarse), (max-width: 760px) {
+  main :is(button, .button, select, input[type=submit]):not(.lane-name):not(.place-opt) { min-height: 34px; }
 }

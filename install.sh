@@ -23,6 +23,18 @@
 #   --defaults     don't ask, use the default answers
 #   --help
 #
+# Server (shared homeserver, e.g. an LXC container):
+#   --server               install as server: a system service
+#                          "qs-podscript-server" instead of the menu entry
+#   --listen ADDR          address to listen on (default 127.0.0.1:8322, or
+#                          0.0.0.0:8322 when --trusted-proxy is given)
+#   --trusted-proxy IP     address of the reverse proxy if it runs on another
+#                          machine/container (comma-separated for several)
+#   --admin NAME           create the first admin login (asks for a password)
+# Example:  ./install.sh --server --trusted-proxy 192.168.1.10 --admin batz
+# Updating a server: just run the new install.sh again - it sees the existing
+# service and keeps its settings.
+#
 # Graphics drivers are NOT installed by this script (that can break a system);
 # if a card is found without a working driver it tells you what to do.
 # Re-running the script updates an existing installation and keeps its data.
@@ -43,6 +55,13 @@ SERVICE=1
 WANT_SERVICE=""     # "" = ask, 1 = yes, 0 = no
 WANT_GPU_SPK=""     # "" = ask, 1 = yes, 0 = no
 AUTO_ANSWER=""       # "" = ask, y = yes to all, n = no to all, d = defaults
+SERVER=""            # "" = desktop install, 1 = server install
+EXISTING_SERVER=""
+LISTEN=""
+TRUSTED=""
+TRUSTED_SET=0
+ADMIN_NAME=""
+SERVER_UNIT="/etc/systemd/system/qs-podscript-server.service"
 
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -56,12 +75,21 @@ while [ $# -gt 0 ]; do
     --yes|-y) AUTO_ANSWER=y; shift ;;
     --no|-n) AUTO_ANSWER=n; shift ;;
     --defaults) AUTO_ANSWER=d; shift ;;
-    --help|-h) sed -n '2,28p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+    --server) SERVER=1; shift ;;
+    --listen) SERVER=1; LISTEN="$2"; shift 2 ;;
+    --trusted-proxy) SERVER=1; TRUSTED="$2"; TRUSTED_SET=1; shift 2 ;;
+    --admin) SERVER=1; ADMIN_NAME="$2"; shift 2 ;;
+    --help|-h) awk 'NR == 1 { next } /^#/ { sub(/^# ?/, ""); print; next } { exit }' "$0"; exit 0 ;;
     *) echo "Unknown option: $1 (see --help)"; exit 1 ;;
   esac
 done
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# an existing server installation is updated as a server
+if [ -z "$SERVER" ] && [ -f "$SERVER_UNIT" ] && grep -q "^ExecStart=$INSTALL_DIR/qs-podscript server" "$SERVER_UNIT"; then
+  SERVER=1
+  EXISTING_SERVER=1
+fi
 LOG="/tmp/qs-podscript-install-$$.log"
 : > "$LOG"
 
@@ -202,6 +230,7 @@ mkdir -p "$INSTALL_DIR"
 if [ "$SRC" != "$INSTALL_DIR" ]; then
   # stop a running instance before replacing the program
   systemctl --user stop qs-podscript.service >/dev/null 2>&1 || true
+  if [ "$SERVER" = 1 ] && [ -f "$SERVER_UNIT" ]; then run $SUDO systemctl stop qs-podscript-server.service || true; fi
   for f in qs-podscript libsherpa-onnx-c-api.so libonnxruntime.so onnxruntime-version.txt README.txt install.sh; do
     [ -e "$SRC/$f" ] && cp -f "$SRC/$f" "$INSTALL_DIR/"
   done
@@ -520,6 +549,104 @@ step "Setting up launchers"
 mkdir -p "$HOME/.local/bin"
 ln -sf "$INSTALL_DIR/qs-podscript" "$HOME/.local/bin/qs-podscript"
 ok "Command 'qs-podscript' available (in ~/.local/bin)"
+
+if [ "$SERVER" = 1 ]; then
+# ------------------------------------------------------------------ server
+interactive() { [ -t 0 ] && [ -z "$AUTO_ANSWER" ]; }
+step "Setting up the server"
+# keep the settings of an existing service unless new ones were given
+OLD_EXEC="$(sed -n 's/^ExecStart=//p' "$SERVER_UNIT" 2>/dev/null | head -n1)"
+if [ -n "$OLD_EXEC" ]; then
+  [ -z "$LISTEN" ] && LISTEN="$(sed -nE 's/.*--listen[ =]([^ ]+).*/\1/p' <<<"$OLD_EXEC")"
+  [ "$TRUSTED_SET" = 0 ] && TRUSTED="$(sed -nE 's/.*--trusted-proxy[ =]([^ ]+).*/\1/p' <<<"$OLD_EXEC")"
+elif [ "$TRUSTED_SET" = 0 ] && interactive; then
+  info "Does the reverse proxy (HTTPS) run on another machine or container? Then enter"
+  info "its address, so visitors are told apart. Leave empty if it runs on this machine."
+  read -r -p "    Address of the reverse proxy: " TRUSTED || true
+fi
+if [ -z "$LISTEN" ]; then
+  if [ -n "$TRUSTED" ]; then LISTEN="0.0.0.0:8322"; else LISTEN="127.0.0.1:8322"; fi
+fi
+SERVER_ARGS="--listen $LISTEN"
+[ -n "$TRUSTED" ] && SERVER_ARGS="$SERVER_ARGS --trusted-proxy $TRUSTED"
+ok "Listens on $LISTEN${TRUSTED:+, reverse proxy at $TRUSTED}"
+
+# first admin login
+if "$INSTALL_DIR/qs-podscript" user list 2>/dev/null | grep -q "No users yet"; then
+  if [ -z "$ADMIN_NAME" ] && interactive; then
+    read -r -p "    Name for the first admin login (empty = later): " ADMIN_NAME || true
+  fi
+  if [ -n "$ADMIN_NAME" ] && [ -t 0 ]; then
+    if "$INSTALL_DIR/qs-podscript" user add "$ADMIN_NAME" --admin; then ok "Admin login '$ADMIN_NAME' created"
+    else warn "Could not create the admin login - try again with: qs-podscript user add $ADMIN_NAME --admin"; fi
+  else
+    [ -n "$ADMIN_NAME" ] && warn "Creating a login needs a password typed in a terminal."
+    info "No logins yet. Add the first admin with: qs-podscript user add <name> --admin"
+  fi
+else
+  ok "Logins: $("$INSTALL_DIR/qs-podscript" user list 2>/dev/null | wc -l) users"
+fi
+
+USE_SERVICE=0
+if [ "$SERVICE" = 0 ]; then
+  info "--no-service: start the server yourself with: qs-podscript server $SERVER_ARGS"
+elif ! command -v systemctl >/dev/null || [ ! -d /run/systemd/system ]; then
+  info "No systemd here - start the server with: $INSTALL_DIR/qs-podscript server $SERVER_ARGS"
+else
+  USE_SERVICE=1
+  printf '%s\n' \
+    "[Unit]" \
+    "Description=QS-PodScript server" \
+    "Wants=network-online.target" \
+    "After=network-online.target" \
+    "" \
+    "[Service]" \
+    "User=$(id -un)" \
+    "ExecStart=$INSTALL_DIR/qs-podscript server $SERVER_ARGS" \
+    "Restart=on-failure" \
+    "RestartSec=5" \
+    "" \
+    "[Install]" \
+    "WantedBy=multi-user.target" | $SUDO tee "$SERVER_UNIT" >/dev/null
+  run $SUDO systemctl daemon-reload
+  run $SUDO systemctl enable qs-podscript-server.service || true
+  if run $SUDO systemctl restart qs-podscript-server.service; then
+    sleep 2
+    if systemctl is-active --quiet qs-podscript-server.service; then ok "Service qs-podscript-server running"
+    else warn "The service did not stay up - see: journalctl -u qs-podscript-server -n 30"; fi
+  else
+    warn "Could not start the service - see: journalctl -u qs-podscript-server -n 30"
+  fi
+fi
+printf '%s\n' \
+  '#!/usr/bin/env bash' \
+  '# Removes the QS-PodScript server including all transcripts, logins and models.' \
+  "read -r -p \"Remove the QS-PodScript server and ALL its data in $INSTALL_DIR? [y/N] \" a" \
+  '[[ "$a" =~ ^[YyJj] ]] || exit 0' \
+  "$SUDO systemctl disable --now qs-podscript-server.service 2>/dev/null || true" \
+  "$SUDO rm -f $SERVER_UNIT" \
+  "$SUDO systemctl daemon-reload 2>/dev/null || true" \
+  'rm -f "$HOME/.local/bin/qs-podscript"' \
+  "rm -rf \"$INSTALL_DIR\"" \
+  'echo "QS-PodScript removed. (ffmpeg and other system packages were left installed.)"' > "$INSTALL_DIR/uninstall.sh"
+chmod +x "$INSTALL_DIR/uninstall.sh"
+cp -f "$LOG" "$INSTALL_DIR/install.log" 2>/dev/null || true
+
+step "Done"
+[ -n "$EXISTING_SERVER" ] && ok "Existing server updated (settings kept)"
+info "Server: QS-PodScript $("$INSTALL_DIR/qs-podscript" version | awk '{print $2}'), listening on $LISTEN"
+case "$BACKEND" in
+  cuda|vulkan) info "If you let the server transcribe itself, it uses the graphics card ($BACKEND)." ;;
+  *)           info "The server doesn't transcribe by itself - helpers' computers do (Setup -> Who transcribes)." ;;
+esac
+[ "$USE_SERVICE" = 1 ] && info "Stop/start: systemctl stop|start qs-podscript-server    Log: journalctl -u qs-podscript-server"
+[ "${LISTEN%%:*}" = "127.0.0.1" ] && info "Put a reverse proxy with HTTPS on this machine in front of http://$LISTEN/ (see README.txt)."
+info "Logins:    qs-podscript user list | add <name> [--admin] | passwd <name>"
+info "Update:    run the install.sh of a newer version (your data and settings are kept)"
+info "Uninstall: $INSTALL_DIR/uninstall.sh"
+info "Install log: $INSTALL_DIR/install.log"
+exit 0
+fi
 
 HAVE_SYSTEMD=0
 if [ "$SERVICE" = 1 ] && command -v systemctl >/dev/null && systemctl --user show-environment >/dev/null 2>&1; then

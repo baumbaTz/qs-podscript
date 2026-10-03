@@ -1,11 +1,21 @@
 # TODO
 
 Cleaned up 2026-09-27: only what Batz decided to keep. Order = planned order.
+Updated 2026-10-03 (v0.31.2) - see HANDOFF.md for the overall state.
+
+## Next up (open points as of v0.31.2)
+- [ ] Batz: look at the episode page, quiz and voice page on a real phone
+      once (0.31.2 checked them at 412 px in a test browser).
+- [ ] Batz: on the server, update with ./install.sh (finds the existing
+      service, keeps --listen/--trusted-proxy). Optional: add the CSP header
+      from README-linux.txt to the Traefik secure-headers middleware.
+- [ ] Optional: CF-Connecting-IP support (only if a Cloudflare proxy is ever
+      put in front of the server).
+- [ ] Dependabot PRs: merge one at a time after CI is green.
 
 ## GitHub (v0.29.0)
-- [ ] Batz: create the repo baumbatz/qs-podscript, push, repository
-      settings + Vulkan whisper-cli.exe release (docs/RELEASING.md), then tag
-      v0.29.0 -> release with all packages (incl. the first macOS build).
+- [x] Repo baumbaTz/qs-podscript, Vulkan whisper-cli.exe deps release,
+      release workflow builds Linux/Windows/macOS/source on a v* tag.
 - [ ] Screenshots in docs/screenshots are from test data - replace with real
       ones (Film Sack etc.) when convenient.
 
@@ -37,9 +47,12 @@ Design: docs/SPEC.md "Homeserver design".
 - [x] Admin overview of reserved episodes, hand back / try again (v0.15.0)
 - [x] Credits shown publicly, anonymous ("Volunteer N") unless the user opts in (v0.15.0)
 - [x] Batz: server installed + started on Debian trixie (0.15.1)
-- [ ] Batz: reverse proxy (Traefik) - not tested yet; for now VPN / LAN is
-      enough while finishing the app. Then: connect your
-      PC, transcribe a few episodes for it, edit through the pass-through.
+- [x] Batz: reverse proxy (Traefik) set up (transcribe.quicksack.li ->
+      LXC :8322). From inside the LAN Batz uses the LAN IP
+      (http://192.168.178.72:8322) - router loopback to the public IP on 443
+      was refused (cause not found: not fail2ban, not the app).
+- [x] Connect PC, transcribe for the server, edit through the pass-through:
+      in daily use (Film Sack, WYHS, GORE).
 
 ## 5. Homeserver web frontend
 - [x] Public read-only view of all transcripts - cleaned up for visitors (v0.25.0).

@@ -10,6 +10,7 @@ import (
 	"html/template"
 	"io"
 	"io/fs"
+	"math"
 	"net"
 	"net/http"
 	"net/url"
@@ -198,6 +199,26 @@ var tmplFuncs = template.FuncMap{
 			return 0
 		}
 		return float64(a) * 100 / float64(b)
+	},
+	// barClass: width class p0..p100 for a progress bar (app.css) - no
+	// inline style, so a strict Content-Security-Policy works
+	"barClass": func(v any) string {
+		var p float64
+		switch x := v.(type) {
+		case int:
+			p = float64(x)
+		case int64:
+			p = float64(x)
+		case float64:
+			p = x
+		}
+		p = math.Round(p)
+		if p < 0 {
+			p = 0
+		} else if p > 100 {
+			p = 100
+		}
+		return fmt.Sprintf("p%d", int(p))
 	},
 	"json": func(v any) template.JS {
 		b, _ := json.Marshal(v)
@@ -412,6 +433,7 @@ func (s *Server) routes() http.Handler {
 	mux.HandleFunc("POST /versions/{vid}/check", s.guard(accessEdit, s.handleQuizAnswer))
 	mux.HandleFunc("GET /feeds/{id}/quiz", s.guard(accessEdit, s.handleQuiz))
 	mux.HandleFunc("GET /episodes/{id}/quiz", s.guard(accessEdit, s.handleQuiz))
+	mux.HandleFunc("GET /episodes/{id}/voice/{label}", s.guard(accessEdit, s.handleVoicePage))
 	mux.HandleFunc("POST /versions/{vid}/voicemerge", s.guard(accessEdit, s.handleVoiceMerge))
 	mux.HandleFunc("POST /versions/{vid}/identify", s.guard(accessEdit, s.handleIdentify))
 	mux.HandleFunc("GET /people", s.guard(accessUser, s.handlePeople))

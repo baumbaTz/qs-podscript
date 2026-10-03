@@ -1,5 +1,32 @@
 # DONE
 
+## 2026-10-03 – v0.31.2 – phones checked, server install in one step, strict CSP possible
+- Phones: checked the remaining pages at 412 px (episode, Look Who's Talking
+  Now, voice page, Setup, people; logged in, logged out and the local app).
+  None scrolls sideways. Fixed: transcript text ran 2 px under the floating
+  scroll buttons; the "Highlight / Hide ads / Hide movie clips" row was
+  squeezed to three lines per label (now wraps as whole labels); buttons
+  and "Someone else…" lists are at least 34 px high on touch screens and
+  narrow windows (were 26-28 px).
+- install.sh --server: installs QS-PodScript as a shared server in one go -
+  system service "qs-podscript-server" (instead of the menu entry and the
+  per-user service), asks for the reverse proxy's address and the first
+  admin login. Options --listen, --trusted-proxy, --admin <name>,
+  --no-service. Listens on 127.0.0.1:8322, or 0.0.0.0:8322 when a proxy
+  address is given. Running a newer install.sh again on the server (with or
+  without --server) finds the service, stops it, updates and restarts it,
+  keeping its listen address and proxy setting. Server uninstall.sh removes
+  the service too. --help now shows the whole option list.
+- Strict Content-Security-Policy possible (e.g. in Traefik): no inline
+  script or style left. The light/dark script moved to /static/theme.js;
+  the speaker lanes are drawn as small SVGs (positions as attributes); the
+  progress bars use width classes p0-p100. A test fails if a template gets
+  an inline script, style attribute, <style> block or on…= handler again.
+  Recommended header in README-linux.txt (Traefik secure-headers).
+- docs/dev/phonecheck.js: correct quiz addresses, modes server / public /
+  local, full-page screenshots, reports buttons smaller than 28 px.
+- README / README-linux.txt / manual: server install via install.sh --server.
+
 ## 2026-10-03 – v0.31.1 – phone layout: header and wide tables
 - Phones: wide tables no longer push the page to the right. Helpers' work,
   account/user pages (computers, computer time, transcribed, cleaned up,

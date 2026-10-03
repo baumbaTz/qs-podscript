@@ -436,9 +436,17 @@ func (s *Server) handleQuiz(w http.ResponseWriter, r *http.Request) {
 	data["Audio"] = fmt.Sprintf("/audio/%s#t=%.1f,%.1f", q.Version.AudioFile, float64(from)/1000, float64(to)/1000)
 	data["AudioFrom"], data["AudioTo"] = from, to
 
-	// chips: hosts and regulars of the podcast, then per row its current
-	// speaker if that is someone else; everybody else in "Someone else"
-	chipPs, otherPs := s.st.chipPeople(feedID, q.Version.EpisodeID)
+	rows, others := s.quizRowViews(feedID, q.Version.EpisodeID, win.Rows, win.StartMs)
+	data["Rows"] = rows
+	data["Others"] = others
+	s.render(w, r, "quiz", "Look Who's Talking Now", "feeds", data)
+}
+
+// quizRowViews: the rows with their name chips - hosts and regulars of the
+// podcast, plus per row its current speaker if that is someone else;
+// everybody else goes into "Someone else". Offsets count from base.
+func (s *Server) quizRowViews(feedID, episodeID int64, in []quizRow, base int64) ([]quizRowView, []quizChoice) {
+	chipPs, otherPs := s.st.chipPeople(feedID, episodeID)
 	var chips, others []quizChoice
 	for _, p := range chipPs {
 		chips = append(chips, quizChoice{Value: fmt.Sprintf("p%d", p.ID), Name: p.Name, Class: spClass(p.Label)})
@@ -447,11 +455,11 @@ func (s *Server) handleQuiz(w http.ResponseWriter, r *http.Request) {
 		others = append(others, quizChoice{Value: fmt.Sprintf("p%d", p.ID), Name: p.Name, Class: spClass(p.Label)})
 	}
 	var rows []quizRowView
-	for i, row := range win.Rows {
+	for i, row := range in {
 		cur := labelValue(row.Label)
 		v := quizRowView{I: i, StartMs: row.StartMs, EndMs: row.EndMs, Current: cur,
 			CurrentName: labelName(row.Label), Class: spClass(row.Label), Words: row.Words,
-			Offset: clockShort(row.StartMs - win.StartMs)}
+			Offset: clockShort(row.StartMs - base)}
 		found := false
 		for _, c := range chips {
 			if c.Value == cur {
@@ -469,9 +477,7 @@ func (s *Server) handleQuiz(w http.ResponseWriter, r *http.Request) {
 		v.Choices = append(v.Choices, quizChoice{"x", "Several at once", "spx"}, quizChoice{"u", "Nobody / music", "spu"})
 		rows = append(rows, v)
 	}
-	data["Rows"] = rows
-	data["Others"] = others
-	s.render(w, r, "quiz", "Look Who's Talking Now", "feeds", data)
+	return rows, others
 }
 
 func clockShort(ms int64) string {
@@ -497,7 +503,12 @@ func (s *Server) handleQuizAnswer(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	next := r.FormValue("next")
-	if !(strings.HasPrefix(next, "/feeds/") || strings.HasPrefix(next, "/episodes/")) || !strings.HasSuffix(next, "/quiz") {
+	voiceMode := r.FormValue("mode") == "voice" // all lines of one voice (voicepage.go): checked line by line
+	if voiceMode {
+		if !strings.HasPrefix(next, fmt.Sprintf("/episodes/%d/voice/", v.EpisodeID)) {
+			next = fmt.Sprintf("/episodes/%d?v=%d", v.EpisodeID, v.ID)
+		}
+	} else if !(strings.HasPrefix(next, "/feeds/") || strings.HasPrefix(next, "/episodes/")) || !strings.HasSuffix(next, "/quiz") {
 		next = fmt.Sprintf("/episodes/%d/quiz", v.EpisodeID)
 	}
 	ws, _ := strconv.ParseInt(r.FormValue("ws"), 10, 64)
@@ -588,6 +599,20 @@ func (s *Server) handleQuizAnswer(w http.ResponseWriter, r *http.Request) {
 		}
 		changed += j - i + 1
 		i = j + 1
+	}
+	if voiceMode {
+		// only the lines shown were looked at, not everything in between
+		for _, a := range ans {
+			s.st.db.Exec(`INSERT INTO checks(version_id,start_ms,end_ms,user_id,changed,created_at) VALUES(?,?,?,?,?,?)`,
+				v.ID, a.a, a.b, uid, map[bool]int{true: 1, false: 0}[a.to != a.orig], time.Now().Unix())
+		}
+		s.st.loadQuiz(v.ID)
+		msg := fmt.Sprintf("Saved – %d line%s checked", len(ans), map[bool]string{true: "", false: "s"}[len(ans) == 1])
+		if changed > 0 {
+			msg += fmt.Sprintf(", %d corrected", changed)
+		}
+		back(w, r, next, msg+".", "")
+		return
 	}
 	if _, err := s.st.db.Exec(`INSERT INTO checks(version_id,start_ms,end_ms,user_id,changed,created_at) VALUES(?,?,?,?,?,?)`,
 		v.ID, ws, we, uid, changed, time.Now().Unix()); err != nil {

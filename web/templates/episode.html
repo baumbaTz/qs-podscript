@@ -93,21 +93,21 @@
   <section class="lanes" id="lanes" data-total="{{$.Data.TotalMs}}" aria-label="Who speaks when">
     {{range .}}
     <div class="lane">
-      {{if ge .Label 0}}<button type="button" class="lane-name {{spClass .Label}}" data-label="{{.Label}}" title="Merge this speaker into another">{{label .Label}} <small>{{.Share}}%</small></button>
+      {{if and (ge .Label 0) ($.CanEdit $e.FeedID)}}<a class="lane-name {{spClass .Label}}" data-label="{{.Label}}" href="/episodes/{{$e.ID}}/voice/{{.Label}}?v={{$.Data.VersionID}}" title="All lines of {{label .Label}}: check them one by one, or name them all at once">{{label .Label}} <small>{{.Share}}%</small></a>
       {{else}}<span class="lane-name {{spClass .Label}}">{{label .Label}} <small>{{.Share}}%</small></span>{{end}}
-      <div class="lane-track {{spClass .Label}}">{{range .Blocks}}<i style="left:{{printf "%.3f" .Left}}%;width:{{printf "%.3f" .Width}}%"></i>{{end}}<b class="playhead" hidden></b></div>
+      <div class="lane-track {{spClass .Label}}"><svg class="lane-blocks" viewBox="0 0 100 1" preserveAspectRatio="none" aria-hidden="true">{{range .Blocks}}<rect x="{{printf "%.3f" .Left}}" width="{{printf "%.3f" .Width}}" height="1"/>{{end}}</svg><b class="playhead" hidden></b></div>
     </div>
     {{end}}
     {{with $.Data.CheckedLane}}
     <div class="lane lane-mark">
       <span class="lane-name mark-checked" title="Passages where a person confirmed or fixed the speakers">{{.Name}} <small>{{clock .TotalMs}}</small></span>
-      <div class="lane-track mark-checked">{{range .Blocks}}<i style="left:{{printf "%.3f" .Left}}%;width:{{printf "%.3f" .Width}}%"></i>{{end}}<b class="playhead" hidden></b></div>
+      <div class="lane-track mark-checked"><svg class="lane-blocks" viewBox="0 0 100 1" preserveAspectRatio="none" aria-hidden="true">{{range .Blocks}}<rect x="{{printf "%.3f" .Left}}" width="{{printf "%.3f" .Width}}" height="1"/>{{end}}</svg><b class="playhead" hidden></b></div>
     </div>
     {{end}}
     {{range $.Data.MarkLanes}}
     <div class="lane lane-mark">
       <span class="lane-name mark-{{.Mark}}">{{.Name}} <small>{{clock .TotalMs}}</small></span>
-      <div class="lane-track mark-{{.Mark}}">{{range .Blocks}}<i style="left:{{printf "%.3f" .Left}}%;width:{{printf "%.3f" .Width}}%"></i>{{end}}<b class="playhead" hidden></b></div>
+      <div class="lane-track mark-{{.Mark}}"><svg class="lane-blocks" viewBox="0 0 100 1" preserveAspectRatio="none" aria-hidden="true">{{range .Blocks}}<rect x="{{printf "%.3f" .Left}}" width="{{printf "%.3f" .Width}}" height="1"/>{{end}}</svg><b class="playhead" hidden></b></div>
     </div>
     {{end}}
   </section>
@@ -149,7 +149,7 @@
   {{end}}{{end}}
 
   {{if $.CanEdit $e.FeedID}}
-  <p class="hint">Double-click a word to play from there or correct it; select several words, click a speaker name or a name in the lanes above to fix who is speaking. Keys: ← → jump 1 second (with Shift 5 seconds), Space plays and pauses. <a href="/help#speakers">More in the manual</a>.</p>
+  <p class="hint">Double-click a word to play from there or correct it; select several words, click a speaker name to fix who is speaking; a name in the lanes above renames that whole voice or checks it line by line. Keys: ← → jump 1 second (with Shift 5 seconds), Space plays and pauses. <a href="/help#speakers">More in the manual</a>.</p>
   {{else}}
   <p class="hint">Click a time to play from there. Keys: ← → jump 1 second (with Shift 5 seconds), Space plays and pauses.{{if $.ServerMode}}{{if not $.User}} <a href="/login">Log in</a> to fix speakers or text.{{end}}{{end}}</p>
   {{end}}
@@ -176,6 +176,7 @@
     <form method="post" action="/versions/{{$.Data.VersionID}}/corrections">
       <button type="button" class="play-here" id="a-play">▶ Play from here</button>
       <p id="assign-what"></p>
+      <a id="a-voice-link" class="voice-link" hidden>Not sure? Check line by line →</a>
       <input type="hidden" name="kind" id="a-kind">
       <input type="hidden" name="start" id="a-start">
       <input type="hidden" name="end" id="a-end">

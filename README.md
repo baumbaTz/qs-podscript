@@ -81,9 +81,17 @@ The same program runs as a server for a group – for example behind
 Traefik, nginx or Caddy with HTTPS:
 
 ```sh
+# Linux, from the unpacked package: installs a system service
+# "qs-podscript-server" and asks for the first admin login
+./install.sh --server --trusted-proxy <proxy-ip>   # proxy on another machine
+./install.sh --server                              # proxy on this machine
+
+# or by hand
 ./qs-podscript user add yourname --admin       # asks for a password
 ./qs-podscript server --listen 127.0.0.1:8322
 ```
+Updating a server: run the newer package's `install.sh` again – it finds the
+service and keeps its settings.
 
 Visitors read, listen and search without an account. Editors (per podcast)
 fix speakers and text in the browser. The server normally doesn't transcribe

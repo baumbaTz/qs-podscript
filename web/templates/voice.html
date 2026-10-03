@@ -1,0 +1,77 @@
+{{define "content"}}
+{{$d := .Data}}{{$ep := $d.Episode}}{{$vid := $d.Version.ID}}
+<p class="crumb"><a href="/feeds/{{$d.Feed.ID}}">{{with $d.Feed.ImageURL}}<img class="art art-s" src="{{.}}" alt="">{{end}}{{$d.Feed.Title}}</a> › <a href="/episodes/{{$ep.ID}}?v={{$vid}}">{{$ep.Title}}</a></p>
+<h1>Everything said by <span class="{{$d.Class}} voice-name">{{$d.Name}}</span></h1>
+<p class="sub">{{$d.Total}} line{{if ne $d.Total 1}}s{{end}}, {{secs $d.Seconds}} in this episode · {{$d.Checked}} checked{{if gt $d.Pages 1}} · showing {{$d.From}}–{{$d.To}}{{end}}</p>
+
+{{if $d.Rows}}
+<section class="panel voice-all">
+  <h2>All of them are …</h2>
+  <p class="sub narrow">If every line below is the same person, name them all at once. {{if not $d.IsPerson}}This also saves the voice as a sample for recognizing that person in other episodes.{{end}} Single lines that are someone else can still be fixed afterwards.</p>
+  <form method="post" action="/versions/{{$vid}}/corrections" class="inline-form">
+    <input type="hidden" name="kind" value="merge">
+    <input type="hidden" name="from" value="{{$d.Label}}">
+    <select name="label" required aria-label="Who all of these lines are">
+      <option value="" disabled selected>Choose…</option>
+      {{with $d.AllPeople}}<optgroup label="People">{{range .}}<option value="{{.Value}}">{{.Name}}</option>{{end}}</optgroup>{{end}}
+      {{with $d.Voices}}<optgroup label="Other unnamed voices">{{range .}}<option value="{{.Value}}">{{.Name}}</option>{{end}}</optgroup>{{end}}
+      <option value="x">Several people at once</option>
+      <option value="u">Nobody / music</option>
+    </select>
+    <button type="submit">Name all {{$d.Total}}</button>
+  </form>
+  <form method="post" action="/versions/{{$vid}}/corrections" class="inline-form">
+    <input type="hidden" name="kind" value="merge">
+    <input type="hidden" name="from" value="{{$d.Label}}">
+    <input type="hidden" name="label" value="newperson">
+    <input name="name" required placeholder="or a new person: name" aria-label="Name of a new person">
+    <button type="submit" class="quiet">New person</button>
+  </form>
+</section>
+
+<h2 class="section-title">Line by line</h2>
+<div class="quiz-player">
+  <audio id="quiz-audio" controls preload="metadata" src="{{$d.Audio}}" data-from="0" data-to="99999999"></audio>
+</div>
+<p class="sub narrow">Click a time to hear that line, or <i>Play with context</i> for the lines around it (shown greyed). The selected name is who QS-PodScript thinks is speaking – pick the right one where it's wrong. Saving marks all lines on this page as checked.</p>
+<p class="sub narrow" id="quiz-split-hint" hidden>Someone else takes over in the middle of a line? Click the first word they say – the line is split there.</p>
+
+<form method="post" action="/versions/{{$vid}}/check" class="quiz" data-row-stop="1">
+  <input type="hidden" name="mode" value="voice">
+  <input type="hidden" name="next" value="{{$d.NextAfterSave}}">
+  <input type="hidden" name="ws" value="0">
+  <input type="hidden" name="we" value="{{$d.AudioMs}}">
+  <input type="hidden" name="n" value="{{len $d.Rows}}">
+  {{range $d.Rows}}{{$row := .}}
+  <fieldset class="qrow{{if .Checked}} is-checked{{end}}" data-s="{{.StartMs}}" data-e="{{.EndMs}}">
+    <legend class="sr">Line at {{.Offset}}, now: {{.CurrentName}}</legend>
+    <input type="hidden" name="s{{.I}}" value="{{.StartMs}}">
+    <input type="hidden" name="e{{.I}}" value="{{.EndMs}}">
+    <input type="hidden" name="o{{.I}}" value="{{.Current}}">
+    {{range .Before}}<p class="ctx"><span class="ctx-time">{{.Clock}}</span> <span class="ctx-who {{.Class}}">{{.Name}}</span> {{.Text}}</p>{{end}}
+    <p class="qtext"><a class="ts" href="/episodes/{{$ep.ID}}?v={{$vid}}#t{{.StartMs}}" data-seek="{{.StartMs}}" title="Play this line">{{.Offset}}</a>
+      {{if .Checked}}<span class="chk" title="Checked by a person">✓</span>{{end}}{{with .Mark}}<span class="badge mark-{{.}}">{{markName .}}</span>{{end}}
+      <span class="text">{{range .Words}}<span data-s="{{.StartMs}}" data-e="{{.EndMs}}">{{.Text}}</span> {{end}}</span></p>
+    {{range .After}}<p class="ctx"><span class="ctx-time">{{.Clock}}</span> <span class="ctx-who {{.Class}}">{{.Name}}</span> {{.Text}}</p>{{end}}
+    <p class="ctx-actions"><a href="/episodes/{{$ep.ID}}?v={{$vid}}#t{{.CtxFrom}}" class="ctx-play" data-from="{{.CtxFrom}}" data-to="{{.CtxTo}}">▶ Play with context</a></p>
+    <div class="chips">
+      {{range .Choices}}<label class="chip {{.Class}}"><input type="radio" name="l{{$row.I}}" value="{{.Value}}" {{if eq .Value $row.Current}}checked{{end}}><span>{{.Name}}</span></label>{{end}}
+      <select name="x{{.I}}" aria-label="Someone else">
+        <option value="">Someone else…</option>
+        {{range $d.Others}}<option value="{{.Value}}">{{.Name}}</option>{{end}}
+        <option value="new">Someone not in this list (new voice)</option>
+      </select>
+    </div>
+  </fieldset>
+  {{end}}
+  <div class="actions quiz-actions">
+    <button type="submit">Save{{if $d.Next}} and next page{{end}}</button>
+    {{with $d.Prev}}<a class="button quiet" href="{{.}}">← Previous page</a>{{end}}
+    {{with $d.Next}}<a class="button quiet" href="{{.}}">Next page without saving →</a>{{end}}
+    <a class="quiet-link" href="/episodes/{{$ep.ID}}?v={{$vid}}">Back to the episode</a>
+  </div>
+</form>
+{{else}}
+<p class="empty">Nobody speaks as {{$d.Name}} in this version (any more) – the lines were given to someone else. <a href="/episodes/{{$ep.ID}}?v={{$vid}}">Back to the episode</a></p>
+{{end}}
+{{end}}

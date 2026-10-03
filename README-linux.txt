@@ -73,6 +73,15 @@ HOMESERVER (shared, multi-user) - e.g. in an LXC container
   work" -> "Add a server") with "Transcribe for this server" ticked. Each
   one takes one episode at a time; several work in parallel. Keep the server
   and all helpers on the same QS-PodScript version.
+  Easiest: install it as a server in one go (system service
+  "qs-podscript-server", asks for the first admin login and its password):
+    ./install.sh --server                                (proxy on this machine)
+    ./install.sh --server --trusted-proxy <proxy-ip>     (proxy elsewhere;
+                                                          listens on 0.0.0.0:8322)
+  More options: ./install.sh --help (--listen, --admin <name>, --no-service).
+  Updating: run the newer package's ./install.sh again - it finds the service
+  and keeps its settings (listen address, proxy).
+  By hand instead:
     ./qs-podscript user add <yourname> --admin      (asks for a password)
     ./qs-podscript server --listen 127.0.0.1:8322
   Put a reverse proxy with HTTPS in front (nginx / Caddy / Traefik) and pass
@@ -96,12 +105,19 @@ HOMESERVER (shared, multi-user) - e.g. in an LXC container
     Helpers upload episode audio with their results. Traefik v3 cuts request
     bodies after 60 s by default; if uploads from slow lines fail, raise it in
     the static config:  entryPoints.websecure.transport.respondingTimeouts.readTimeout: 600s
+    Strict Content-Security-Policy (optional): the pages load everything
+    from the server itself and have no inline scripts or styles, so this
+    works (e.g. in your secure-headers middleware):
+      middlewares:
+        secure-headers:
+          headers:
+            contentSecurityPolicy: "default-src 'self'; img-src 'self' data:; media-src 'self'; style-src 'self'; script-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
   If the proxy runs in another container/machine, listen on the network and
   tell the server which address the proxy has (otherwise all visitors look
   like the proxy and share one login-attempt limit):
     ./qs-podscript server --listen 0.0.0.0:8322 --trusted-proxy <proxy-ip>
   Only the proxy should be able to reach port 8322 (firewall).
-  As a system service (/etc/systemd/system/qs-podscript-server.service):
+  The service install.sh --server writes (/etc/systemd/system/qs-podscript-server.service):
     [Unit]
     Description=QS-PodScript server
     After=network-online.target
@@ -110,7 +126,6 @@ HOMESERVER (shared, multi-user) - e.g. in an LXC container
     Restart=on-failure
     [Install]
     WantedBy=multi-user.target
-  Install for a server with:  ./install.sh --cpu --no-service --defaults
   Users are managed on the "Users" page (admins) or with: qs-podscript user list|add|passwd|admin|delete
   To start with existing work: export it on your PC (Setup page -> Export),
   copy the file to the server, then
