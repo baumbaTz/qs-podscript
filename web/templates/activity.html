@@ -7,7 +7,7 @@
 
 {{define "activityTable"}}
 {{with .}}
-<table class="episodes activity">
+<table class="episodes activity stack">
   <thead><tr><th>When</th><th>Who</th><th>What</th><th>Episode</th></tr></thead>
   <tbody>{{range .}}<tr><td class="date">{{ago .At}}</td><td>{{.User}}</td><td>{{.Action}}{{with .Detail}} <small class="sub">({{.}})</small>{{end}}</td><td>{{if .EpisodeID}}<a href="/episodes/{{.EpisodeID}}">{{.Episode}}</a>{{end}}</td></tr>{{end}}</tbody>
 </table>

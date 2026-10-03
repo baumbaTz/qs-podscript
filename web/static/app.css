@@ -897,3 +897,38 @@ a.lane-name:hover { text-decoration: underline; }
   .assign:has(.assign-text[hidden]):has(.assign-mark[hidden]) { display: block; width: min(34rem, calc(100vw - 2rem)); }
 }
 table.episodes th.num, table.episodes td.num { text-align: right; white-space: nowrap; }
+
+/* ---------- phones: wide tables become one card per row (0.31.1) -----
+   The main cell (episode, computer) gets its own line, the rest flows
+   below it; cells with data-label get that label in front. */
+@media (max-width: 760px) {
+  table.stack, table.stack tbody, table.stack tr, table.stack td { display: block; width: auto; }
+  table.stack { width: 100%; }
+  table.stack thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  table.stack tr { display: flex; flex-wrap: wrap; align-items: baseline; gap: .15rem .9rem; padding: .7rem 0; border-top: 1px solid var(--rule); }
+  table.stack td { border: 0; padding: 0; min-width: 0; overflow-wrap: anywhere; }
+  table.stack td.main { flex: 1 1 100%; order: -1; font-weight: 600; }
+  table.stack td.date, table.stack td.num, table.stack td.status { width: auto; text-align: left; font-size: .9rem; }
+  table.stack td.act { width: auto; margin-left: auto; text-align: right; }
+  table.stack td.act:empty, table.stack td:empty { display: none; }
+  table.stack td[data-label]::before { content: attr(data-label) ": "; color: var(--ink-soft); font-size: .85rem; }
+  table.stack td.empty { flex: 1 1 100%; }
+}
+
+/* ---------- phones: header (0.31.1) */
+@media (max-width: 760px) {
+  /* at the top: the menu wraps instead of being cut off */
+  .top:not(.compact) nav { flex-wrap: wrap; overflow: visible; gap: .25rem 1.1rem; -webkit-mask-image: none; mask-image: none; }
+  /* helpers' status: label with the numbers below it, button on the right */
+  .top .helpers { flex-wrap: nowrap; justify-content: space-between; }
+  .top .helpers .job-line { flex: 1 1 auto; flex-direction: column; align-items: flex-start; gap: 0; }
+  .top .helpers .job-state { white-space: nowrap; }
+  .top .helpers .job-stage { white-space: normal; }
+  .top .helpers .job-actions { flex: none; }
+  /* scrolled: the status shrinks (… at the end) instead of running over the name */
+  .top.compact .job { grid-area: job; overflow: hidden; min-width: 0; justify-content: flex-end; }
+  .top.compact .job-line { flex: 0 1 auto; }
+  .top.compact .job-line { min-width: 0; flex-direction: row; }
+  .top.compact .helpers .job-state { display: none; }
+  .top.compact .job-stage { white-space: nowrap; }
+}

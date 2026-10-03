@@ -37,11 +37,11 @@
   <h2 class="section-title">Connected computers</h2>
   <p class="sub narrow">Computers that connected their QS-PodScript with this account. Removing one ends its access: it can no longer transcribe for the server or show the server's podcasts until it connects again.</p>
   {{with .Data.Tokens}}
-  <table class="episodes">
+  <table class="episodes stack">
     <thead><tr><th>Computer</th><th>Connected</th><th>Last seen</th><th><span class="sr">Action</span></th></tr></thead>
     <tbody>
     {{range .}}
-      <tr><td>{{.Name}}</td><td class="date">{{ago .CreatedAt}}</td><td class="date">{{ago .LastSeen}}</td>
+      <tr><td class="main">{{.Name}}</td><td class="date" data-label="Connected">{{ago .CreatedAt}}</td><td class="date" data-label="Last seen">{{ago .LastSeen}}</td>
         <td class="act"><form method="post" action="/keys/{{.ID}}/delete"><input type="hidden" name="user" value="{{$u.ID}}"><button type="submit" class="quiet small">Remove</button></form></td></tr>
     {{end}}
     </tbody>
@@ -53,9 +53,9 @@
 <section>
   <h2 class="section-title">Computer time</h2>
   <p class="sub narrow">How long each computer worked on episodes: downloading, transcribing, finding speakers. Speed: minutes of audio per minute of work.</p>
-  <table class="episodes">
+  <table class="episodes stack">
     <thead><tr><th>Computer</th><th class="num">Episodes</th><th class="num">Audio</th><th class="num">Busy</th><th class="num">Transcribing</th><th class="num">Speakers</th><th class="num">Speed</th><th>Last</th></tr></thead>
-    <tbody>{{range .}}<tr><td>{{.Name}}</td><td class="num">{{.Jobs}}</td><td class="num">{{hours .AudioSec}}</td><td class="num">{{hours .BusySec}}</td><td class="num">{{hours .WhisperSec}}</td><td class="num">{{hours .DiarizeSec}}</td><td class="num">{{.Speed}}</td><td class="date">{{ago .Last}}</td></tr>{{end}}</tbody>
+    <tbody>{{range .}}<tr><td class="main">{{.Name}}</td><td class="num" data-label="Episodes">{{.Jobs}}</td><td class="num" data-label="Audio">{{hours .AudioSec}}</td><td class="num" data-label="Busy">{{hours .BusySec}}</td><td class="num" data-label="Transcribing">{{hours .WhisperSec}}</td><td class="num" data-label="Speakers">{{hours .DiarizeSec}}</td><td class="num" data-label="Speed">{{.Speed}}</td><td class="date" data-label="Last">{{ago .Last}}</td></tr>{{end}}</tbody>
   </table>
 </section>
 {{end}}
@@ -63,9 +63,9 @@
 <section>
   <h2 class="section-title">Transcribed</h2>
   {{with .Data.Work}}
-  <table class="episodes">
+  <table class="episodes stack">
     <thead><tr><th>When</th><th>Episode</th><th>Podcast</th><th>Computer</th><th class="num">Took</th><th class="num">Speed</th></tr></thead>
-    <tbody>{{range .}}<tr><td class="date">{{ago .At}}</td><td><a href="/episodes/{{.EpisodeID}}">{{.Title}}</a>{{if eq .Kind "speakers"}} <small class="sub">(speakers redone)</small>{{end}}</td><td>{{.Podcast}}</td><td>{{.Device}}</td><td class="num">{{if .BusySec}}{{hours .BusySec}}{{end}}</td><td class="num">{{.Speed}}</td></tr>{{end}}</tbody>
+    <tbody>{{range .}}<tr><td class="date">{{ago .At}}</td><td class="main"><a href="/episodes/{{.EpisodeID}}">{{.Title}}</a>{{if eq .Kind "speakers"}} <small class="sub">(speakers redone)</small>{{end}}</td><td>{{.Podcast}}</td><td>{{.Device}}</td><td class="num" data-label="Took">{{if .BusySec}}{{hours .BusySec}}{{end}}</td><td class="num" data-label="Speed">{{.Speed}}</td></tr>{{end}}</tbody>
   </table>
   {{else}}<p class="empty">Nothing yet.</p>{{end}}
 </section>
@@ -73,9 +73,9 @@
 <section>
   <h2 class="section-title">Cleaned up</h2>
   {{with .Data.Cleaned}}
-  <table class="episodes">
+  <table class="episodes stack">
     <thead><tr><th>Last change</th><th>Episode</th><th>Podcast</th><th>Changes</th></tr></thead>
-    <tbody>{{range .}}<tr><td class="date">{{ago .At}}</td><td><a href="/episodes/{{.EpisodeID}}">{{.Title}}</a></td><td>{{.Podcast}}</td><td>{{.Count}}</td></tr>{{end}}</tbody>
+    <tbody>{{range .}}<tr><td class="date">{{ago .At}}</td><td class="main"><a href="/episodes/{{.EpisodeID}}">{{.Title}}</a></td><td>{{.Podcast}}</td><td data-label="Changes">{{.Count}}</td></tr>{{end}}</tbody>
   </table>
   {{else}}<p class="empty">Nothing yet.</p>{{end}}
 </section>
@@ -88,7 +88,7 @@
 
 {{define "activityTable"}}
 {{with .}}
-<table class="episodes activity">
+<table class="episodes activity stack">
   <thead><tr><th>When</th><th>Who</th><th>What</th><th>Episode</th></tr></thead>
   <tbody>{{range .}}<tr><td class="date">{{ago .At}}</td><td>{{.User}}</td><td>{{.Action}}{{with .Detail}} <small class="sub">({{.}})</small>{{end}}</td><td>{{if .EpisodeID}}<a href="/episodes/{{.EpisodeID}}">{{.Episode}}</a>{{end}}</td></tr>{{end}}</tbody>
 </table>

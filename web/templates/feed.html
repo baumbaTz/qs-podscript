@@ -185,13 +185,13 @@
 </form>
 {{end}}
 
-<table class="episodes" data-autoreload>
+<table class="episodes stack" data-autoreload>
   <thead><tr><th>Date</th><th>Episode</th>{{if not .Data.Public}}<th>Status</th><th><span class="sr">Action</span></th>{{end}}</tr></thead>
   <tbody>
   {{range .Data.Episodes}}
     <tr class="st-{{.Status}}">
       <td class="date">{{date .PubDate}}</td>
-      <td>{{if .ActiveVersionID.Valid}}<a href="/episodes/{{.ID}}">{{.Title}}</a>{{else}}{{.Title}}{{end}}
+      <td class="main">{{if .ActiveVersionID.Valid}}<a href="/episodes/{{.ID}}">{{.Title}}</a>{{else}}{{.Title}}{{end}}
         {{if $.Data.Public}}{{if not .ActiveVersionID.Valid}} <small class="sub">– not transcribed yet</small>{{end}}</td>{{else}}
         {{with index $.Data.SourceNames .SourceID}}<small class="sub src">{{.}}</small>{{end}}
         {{if and (eq .Status "error") .Error}}<div class="ep-err">{{.Error}}</div>{{end}}</td>

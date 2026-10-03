@@ -1,5 +1,21 @@
 # DONE
 
+## 2026-10-03 – v0.31.1 – phone layout: header and wide tables
+- Phones: wide tables no longer push the page to the right. Helpers' work,
+  account/user pages (computers, computer time, transcribed, cleaned up,
+  activity), Who did what, a podcast's episode list and a person's voice
+  samples show one card per row: the episode (or computer) on its own line,
+  the rest below, with labels where a bare number would be unclear
+  ("Busy: 16 min"). Pure CSS (class "stack", data-label on cells).
+- Phone header at the top: the menu wraps onto a second line instead of
+  being cut off ("ACTIV…"); "Helpers' computers" with the numbers below it
+  and the button on the right, no more broken label.
+- Phone header when scrolled: the status sits in its own column and gets
+  "…" when short on room - it used to run over the name and "Server" badge
+  (an older rule let it span the whole row).
+- Checked at 412 px wide (QuickSack look, server mode): no page scrolls
+  sideways any more.
+
 ## 2026-10-02 – v0.31.0 – computer time on the user pages
 - Account / user page: new box "computer time" (total, of that transcribing
   and finding speakers) and a "Computer time" table per computer: episodes,
