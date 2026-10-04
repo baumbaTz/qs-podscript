@@ -1725,8 +1725,25 @@ func (s *Server) handleCorrectionAdd(w http.ResponseWriter, r *http.Request) {
 		anchor = c.StartMs
 	case "merge":
 		c.From, err = strconv.Atoi(r.FormValue("from"))
-		if err != nil || c.From < 0 || c.From == c.Label {
+		if err != nil || c.From < labelCrosstalk || c.From == c.Label {
 			fail("Choose a different speaker.")
+			return
+		}
+		if c.From < 0 {
+			// "Unknown" and "[crosstalk]" are no voice of their own (no
+			// cluster to rename): give each of their lines to the chosen
+			// speaker with a passage correction. No voice samples - these
+			// lines can be music or several people at once.
+			n, err := s.relabelLines(v, corr, c.From, c.Label, c.UserID)
+			if err != nil {
+				fail(err.Error())
+				return
+			}
+			if n == 0 {
+				fail("No lines of " + labelName(c.From) + " left in this version.")
+				return
+			}
+			http.Redirect(w, r, to, http.StatusSeeOther)
 			return
 		}
 	default:
@@ -1755,6 +1772,35 @@ func (s *Server) handleCorrectionAdd(w http.ResponseWriter, r *http.Request) {
 		dest += fmt.Sprintf("#at%d", anchor)
 	}
 	http.Redirect(w, r, dest, http.StatusSeeOther)
+}
+
+// relabelLines gives every line that currently shows label from (Unknown or
+// crosstalk) to label to, one passage correction per line; returns how many.
+func (s *Server) relabelLines(v Version, corr []Correction, from, to int, userID int64) (int, error) {
+	segs, toks, turns, err := s.st.LoadResults(v.ID)
+	if err != nil {
+		return 0, err
+	}
+	n := 0
+	for _, c := range relabelRanges(buildUtterances(segs, toks, turns, corr), from, to) {
+		c.UserID = userID
+		if _, err := s.st.AddCorrectionID(v.ID, c); err != nil {
+			return n, err
+		}
+		n++
+	}
+	return n, nil
+}
+
+// relabelRanges: one passage correction per line labelled from, giving it to.
+func relabelRanges(us []Utterance, from, to int) []Correction {
+	var out []Correction
+	for _, u := range us {
+		if u.Label == from && u.EndMs > u.StartMs {
+			out = append(out, Correction{Kind: "range", StartMs: u.StartMs, EndMs: u.EndMs, Label: to})
+		}
+	}
+	return out
 }
 
 func (s *Server) handleVoiceMerge(w http.ResponseWriter, r *http.Request) {

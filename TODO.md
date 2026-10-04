@@ -1,7 +1,7 @@
 # TODO
 
 Cleaned up 2026-09-27: only what Batz decided to keep. Order = planned order.
-Updated 2026-10-03 (v0.34.3) - see HANDOFF.md for the overall state.
+Updated 2026-10-03 (v0.34.4) - see HANDOFF.md for the overall state.
 
 ## Next up (open points as of v0.31.2)
 - [ ] Batz: look at the episode page, quiz and voice page on a real phone
@@ -30,8 +30,8 @@ Updated 2026-10-03 (v0.34.3) - see HANDOFF.md for the overall state.
 ## GitHub (v0.29.0)
 - [x] Repo baumbaTz/qs-podscript, Vulkan whisper-cli.exe deps release,
       release workflow builds Linux/Windows/macOS/source on a v* tag.
-- [ ] Screenshots in docs/screenshots are from test data - replace with real
-      ones (Film Sack etc.) when convenient.
+- [x] Screenshots redone for 0.34.4 (QuickSack, logo) - still the made-up
+      demo podcast; real ones (Film Sack etc.) only if wanted.
 
 ## Ongoing
 - [ ] Windows packages: compiled with every build (catches breakage), but only

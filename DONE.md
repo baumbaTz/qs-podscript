@@ -1,5 +1,31 @@
 # DONE
 
+## 2026-10-03 – v0.34.4 – screenshots and texts for the current state; "Unknown" in the lanes
+- Found by Batz: "Unknown" (and "[crosstalk]") in the speaker lanes of an
+  episode could not be clicked, so their lines could not be given to a
+  person at once. They are links now like every voice: the quick menu
+  ("Everything said by Unknown is actually: …") and "Check line by line".
+  As they are no voice of their own (lines someone marked "Unknown / not
+  speech" or "Several at once", or nobody detected), choosing a person adds
+  one passage correction per line instead of a voice rename; no voice
+  samples are saved from them. The menu hides the voice's own button and
+  the voice-sample note for them. Test for the passage logic.
+- README screenshots taken again (made-up demo podcast as before): QuickSack
+  is the default look now, with the logo, drawn scroll buttons and bright
+  mode. New: the podcast page, Setup (speaker detection), the Classic look
+  and a phone picture; the old "QuickSack" extra pictures are gone (the
+  normal ones show it now). docs/social-preview.png (GitHub's link preview)
+  in the same style.
+- docs/dev/screenshots.js takes all of them in one go from the demo data.
+- README: looks (QuickSack default, both bright or dark, phones), speaker
+  detection on the graphics card (--gpu-speakers, ~10x in a first test),
+  server install in one command, link previews, patchelf for building.
+- Manual: realistic times - transcription a few minutes with a graphics
+  card, speaker detection on the processor up to an hour for a long
+  episode, 10-20 minutes in total with --gpu-speakers.
+- Linux README: speaker detection on the graphics card with the first
+  measurement (RTX 3070, ~4 minutes for an episode of over an hour).
+
 ## 2026-10-03 – v0.34.3 – speaker detection on the graphics card really works
 - Found by Batz: "qs-podscript gpu-check" said "GPU-CHECK OK ... cpu=133ms
   gpu=133ms" - but both ran on the processor. The speaker detection library

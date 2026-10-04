@@ -93,7 +93,7 @@
   <section class="lanes" id="lanes" data-total="{{$.Data.TotalMs}}" aria-label="Who speaks when">
     {{range .}}
     <div class="lane">
-      {{if and (ge .Label 0) ($.CanEdit $e.FeedID)}}<a class="lane-name {{spClass .Label}}" data-label="{{.Label}}" href="/episodes/{{$e.ID}}/voice/{{.Label}}?v={{$.Data.VersionID}}" title="All lines of {{label .Label}}: check them one by one, or name them all at once">{{label .Label}} <small>{{.Share}}%</small></a>
+      {{if and (ge .Label -2) ($.CanEdit $e.FeedID)}}<a class="lane-name {{spClass .Label}}" data-label="{{.Label}}" href="/episodes/{{$e.ID}}/voice/{{.Label}}?v={{$.Data.VersionID}}" title="All lines of {{label .Label}}: check them one by one, or name them all at once">{{label .Label}} <small>{{.Share}}%</small></a>
       {{else}}<span class="lane-name {{spClass .Label}}">{{label .Label}} <small>{{.Share}}%</small></span>{{end}}
       <div class="lane-track {{spClass .Label}}"><svg class="lane-blocks" viewBox="0 0 100 1" preserveAspectRatio="none" aria-hidden="true">{{range .Blocks}}<rect x="{{printf "%.3f" .Left}}" width="{{printf "%.3f" .Width}}" height="1"/>{{end}}</svg><b class="playhead" hidden></b></div>
     </div>

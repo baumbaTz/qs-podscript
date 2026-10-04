@@ -39,20 +39,27 @@ along and search; volunteers fix speakers and words, and their computers
   by podcast or by person; a hit opens the episode at that spot.
 - **Shared server** with public read-only pages, logins, editors per podcast,
   helpers' computers taking work one episode at a time, credits for who
-  transcribed and cleaned up what.
+  transcribed and cleaned up what. Installed with one command
+  (`./install.sh --server`); helpers can connect while installing. Proper link
+  previews (Discord, Slack …) and a sitemap for search engines.
 - **Runs offline and stays small:** one program, a local web interface, no
   accounts, nothing uploaded anywhere (except to your own server, if you use
   one). Little JavaScript – the pages work without it.
 - **Graphics cards:** NVIDIA (CUDA), AMD/Intel/NVIDIA (Vulkan) on Windows and
-  Linux, Apple Silicon (Metal) on macOS. Speaker detection on NVIDIA cards
-  on Linux (optional).
-- Two looks: Classic (bright or dark) and QuickSack.
+  Linux, Apple Silicon (Metal) on macOS. Speaker detection can run on an
+  NVIDIA card too (Linux, optional: `./install.sh --gpu-speakers`) – around
+  ten times faster than on the processor in a first test.
+- Two looks, each bright or dark: QuickSack (the default) and Classic.
+  Works on phones too.
 
 | | |
 |---|---|
-| ![Podcasts](docs/screenshots/podcasts.png) | ![Search](docs/screenshots/search.png) |
-| ![Correcting](docs/screenshots/correction.png) | ![Look Who's Talking Now](docs/screenshots/look-whos-talking.png) |
-| ![Bright](docs/screenshots/episode-light.png) | ![QuickSack look](docs/screenshots/episode-quicksack.png) |
+| ![Podcasts](docs/screenshots/podcasts.png) | ![A podcast](docs/screenshots/podcast.png) |
+| ![Search](docs/screenshots/search.png) | ![Correcting](docs/screenshots/correction.png) |
+| ![Look Who's Talking Now](docs/screenshots/look-whos-talking.png) | ![Setup: speaker detection](docs/screenshots/setup.png) |
+| ![Bright mode](docs/screenshots/episode-light.png) | ![Classic look](docs/screenshots/episode-classic.png) |
+
+<p align="center"><img src="docs/screenshots/phone.png" alt="On a phone" width="300"></p>
 
 ## Download
 
@@ -63,7 +70,7 @@ Each package has a `README.txt` with the details.
 | System | Package | Notes |
 |---|---|---|
 | **Windows 10/11** (x64) | `qs-podscript-…-windows-x64.zip` | Unzip, run `install.cmd` (or `qs-podscript.exe` directly). Downloads ffmpeg, whisper.cpp and the models itself. |
-| **Linux** (x64, glibc 2.35+) | `qs-podscript-…-linux-x64.tar.gz` | Unpack, run `./install.sh` – installs ffmpeg, builds a CUDA/Vulkan whisper.cpp if possible, adds a menu entry. |
+| **Linux** (x64, glibc 2.35+) | `qs-podscript-…-linux-x64.tar.gz` | Unpack, run `./install.sh` – installs ffmpeg, builds a CUDA/Vulkan whisper.cpp if possible, adds a menu entry. `--gpu-speakers`: speaker detection on an NVIDIA card. `--help` for all options. |
 | **macOS** (Apple Silicon) | `qs-podscript-…-macos-arm64.zip` | **New, not tested on a real Mac yet.** Needs `brew install ffmpeg whisper-cpp`. See the package README (Gatekeeper). |
 
 On first start, the **Setup** page downloads the speech and speaker models
@@ -71,8 +78,9 @@ On first start, the **Setup** page downloads the speech and speaker models
 top of every page.
 
 **Hardware:** a graphics card makes transcription many times faster than the
-processor alone. Speaker detection runs on the processor (on Linux optionally
-on an NVIDIA card) and can take as long as the transcription. Disk: a few GB
+processor alone. Speaker detection runs on the processor, where it can take
+as long as the transcription or longer – on Linux with an NVIDIA card
+(driver 580+) `./install.sh --gpu-speakers` moves it to the graphics card. Disk: a few GB
 for the models, plus about 11 MB per hour of audio for the listening copies.
 
 ## Shared server
@@ -107,12 +115,13 @@ your computer, **Setup → Import** on the server, restart.
 
 ## Building from source
 
-Needs Go 1.24+ and a C compiler (cgo: sherpa-onnx, SQLite).
+Needs Go 1.24+ and a C compiler (cgo: sherpa-onnx, SQLite); `build.sh` also
+uses `patchelf` and, for Windows, MinGW.
 
 ```sh
 go test -tags sqlite_fts5 ./...
 go build -tags sqlite_fts5 -o qs-podscript .     # FTS5 = search index; without the tag search falls back to LIKE
-./build.sh          # on Linux: Linux tar.gz + Windows zip (needs gcc-mingw-w64-x86-64)
+./build.sh          # on Linux: Linux tar.gz + Windows zip (needs gcc-mingw-w64-x86-64, patchelf)
 ./build-macos.sh    # on a Mac: macOS zip
 ```
 

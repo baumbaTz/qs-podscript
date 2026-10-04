@@ -271,7 +271,14 @@
     $("a-from").value = opts.from != null ? opts.from : "";
     const sel = $("a-label");
     sel.value = "";
-    menu.querySelectorAll("[data-label]").forEach((o) => { o.hidden = opts.from != null && o.dataset.label === String(opts.from); });
+    // the voice's own button is hidden ("Unknown" / "Several at once" are -1 / -2 in the lanes, u / x on the buttons)
+    const self = opts.from != null ? ({ "-1": "u", "-2": "x" }[String(opts.from)] || String(opts.from)) : null;
+    menu.querySelectorAll("[data-label], button[name=label][value=u], button[name=label][value=x]").forEach((o) => {
+      o.hidden = self !== null && (o.dataset.label || o.value) === self;
+    });
+    // lines of "Unknown" / "[crosstalk]" are not saved as voice samples (music, several people)
+    const note = menu.querySelector(".assign-note");
+    if (note) note.hidden = opts.from != null && Number(opts.from) < 0;
     if ($("a-submit")) $("a-submit").hidden = true; // chips send at once; "Assign" is for the list
     $("a-name").hidden = true;
     $("a-name").required = false;

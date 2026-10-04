@@ -23,7 +23,9 @@ EASIEST: run the installer from this folder
 SPEAKER DETECTION ON THE GRAPHICS CARD (optional, NVIDIA only)
   ./install.sh --gpu-speakers
   Speaker detection (telling voices apart) normally runs on the processor and
-  takes about as long as the transcription. With this option the installer
+  takes as long as the transcription or longer; on the graphics card it was
+  about ten times faster in a first test (RTX 3070: ~4 minutes for an episode
+  of over an hour). With this option the installer
   adds sherpa-onnx's graphics-card build (the speaker detection library with
   CUDA support, plus its ONNX Runtime) and the NVIDIA libraries it needs
   (CUDA 13, cuDNN 9 - about 1.3 GB download, 2 GB on disk, kept inside the

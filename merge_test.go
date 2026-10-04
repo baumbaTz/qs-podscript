@@ -289,3 +289,31 @@ func TestFindLoops(t *testing.T) {
 		t.Fatalf("short words flagged: %d", n) // single-word repeats are normal speech
 	}
 }
+
+// "Unknown" / "[crosstalk]" in the lanes can be given to someone: one passage
+// correction per line, on top of the earlier "unknown" marking.
+func TestRelabelUnknownLines(t *testing.T) {
+	turns := []Turn{{0, 4000, 0}, {4000, 8000, 2}, {8000, 12000, 1}}
+	segs := []Segment{{0, 0, 12000, "x"}}
+	var toks []Token
+	for i, w := range []string{" a", " b", " c", " d", " e", " f", " g", " h", " i", " j", " k", " l"} {
+		toks = append(toks, tok(0, i, int64(i)*1000, int64(i+1)*1000, w))
+	}
+	corr := []Correction{
+		{Kind: "range", StartMs: 0, EndMs: 2000, Label: labelUnknown},
+		{Kind: "range", StartMs: 8000, EndMs: 10000, Label: labelUnknown},
+		{Kind: "range", StartMs: 4000, EndMs: 6000, Label: labelCrosstalk},
+	}
+	us := buildUtterances(segs, toks, turns, corr)
+	if got := linesOf(us); got != "Unknown:a b | Speaker 1:c d | [crosstalk]:e f | Speaker 3:g h | Unknown:i j | Speaker 2:k l" {
+		t.Fatalf("before: %s", got)
+	}
+	add := relabelRanges(us, labelUnknown, personLabel(7))
+	if len(add) != 2 {
+		t.Fatalf("want 2 passages, got %+v", add)
+	}
+	got := linesOf(buildUtterances(segs, toks, turns, append(corr, add...)))
+	if strings.Contains(got, "Unknown") || !strings.Contains(got, "[crosstalk]:e f") {
+		t.Fatalf("after: %s", got)
+	}
+}
