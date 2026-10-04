@@ -110,7 +110,7 @@ func toolVersions(st *Store) []toolInfo {
 		{"sherpa-onnx", "speaker detection: tells voices apart", sherpa.GetVersion() + " (ONNX Runtime " + sherpa.GetOnnxruntimeVersion() + ")", "https://github.com/k2-fsa/sherpa-onnx"},
 		{"pyannote segmentation 3.0", "finds where one speaker stops and another starts", "segmentation-3.0", "https://huggingface.co/pyannote/segmentation-3.0"},
 		{"Voice model for detection", "groups speech into voices (setting on the Setup page)", detModel, detLink},
-		{"Speaker detection runs on", "graphics card support is optional (Linux installer: --gpu-speakers)", deviceSummary(), ""},
+		{"Speaker detection runs on", "NVIDIA graphics cards on Windows and Linux (optional: Setup → Speaker detection)", deviceSummary(), ""},
 		{"Voice model for voiceprints", "voice samples of people – fixed, so voiceprints stay comparable", embeddingFile, "https://github.com/wenet-e2e/wespeaker"},
 		{"Silero VAD", "voice activity detection, only for podcasts where it's switched on", vad, "https://github.com/snakers4/silero-vad"},
 		{"SQLite", "the database with transcripts, people and settings", sqliteVer, "https://sqlite.org"},

@@ -1,5 +1,49 @@
 # DONE
 
+## 2026-10-04 – v0.35.0 – speaker detection on the graphics card from Setup, also on Windows
+- Setup → Speaker detection has a "Graphics card" part now: with an NVIDIA
+  card (driver 580 or newer) on Windows or Linux, "Use the graphics card for
+  speaker detection" downloads graphics card support once (about 1.3 GB on
+  Linux, 1.5 GB on Windows), puts it in place and tests it right away;
+  progress shows at the top like the setup. When installed: "Remove
+  graphics card support" (and "Install again" if the test failed), plus the
+  "Runs on" choice as before. Other computers get a plain reason instead:
+  no NVIDIA driver, driver too old, NVIDIA card too old (CUDA 13 dropped
+  everything before the RTX 20 / GTX 16 series - e.g. a GT 1030 would
+  otherwise have downloaded 1.3 GB for nothing; checked via nvidia-smi's
+  compute capability, by name on old drivers), AMD/Intel card (no
+  ready-made speaker detection for them), Mac. Transcription still uses
+  those cards through Vulkan.
+- New in QS-PodScript itself (gpuspeakers.go), replacing the shell code in
+  install.sh: sherpa-onnx's GPU build 1.13.8 for Linux and – new – Windows,
+  NVIDIA's CUDA 13 / cuDNN 9 libraries from their official PyPI packages,
+  and on Windows the Visual C++ runtime the GPU build needs; every download
+  pinned and checked by SHA-256. The normal libraries are saved first so
+  "remove" puts them back. Libraries the running program has loaded are
+  never overwritten (Linux replaces the file, Windows renames the old one
+  and deletes it at the next start). Speaker detection runs in a child
+  process, so it uses the graphics card right after installing – no
+  restart; voiceprints computed in the app itself follow at the next start.
+- If the program would no longer start with the new libraries (checked in
+  a child process), everything is put back at once.
+- After an update the package's normal libraries are back next to the
+  program – QS-PodScript notices at start and puts the GPU build back in
+  place (no download).
+- Command line: qs-podscript gpu-speakers [install|remove|status] (exit code
+  0 / 1 failed / 2 not possible here; the last line starts with
+  GPU-SPEAKERS for scripts).
+- install.sh uses it (same folders as before, so 0.34.3/0.34.4 installs are
+  picked up without a new download); it now offers it with "yes" as the
+  default when it finds a suitable NVIDIA card. install.ps1: same question
+  plus -GpuSpeakers / -NoGpuSpeakers.
+- Tested here without an NVIDIA card: full download/install of the Linux
+  part, the test ends at "NVIDIA driver missing" as expected, removal
+  restores the original libraries byte for byte, the re-apply after a
+  simulated update works; the Windows build compiles and install.ps1 parses.
+  Windows on a real NVIDIA card is untested.
+- Manual, READMEs and the About page updated; docs/TECHNICAL-OVERVIEW.md
+  (a short technical brief for planning) added.
+
 ## 2026-10-03 – v0.34.4 – screenshots and texts for the current state; "Unknown" in the lanes
 - Found by Batz: "Unknown" (and "[crosstalk]") in the speaker lanes of an
   episode could not be clicked, so their lines could not be given to a

@@ -1,7 +1,7 @@
 # TODO
 
 Cleaned up 2026-09-27: only what Batz decided to keep. Order = planned order.
-Updated 2026-10-03 (v0.34.4) - see HANDOFF.md for the overall state.
+Updated 2026-10-04 (v0.35.0) - see HANDOFF.md for the overall state.
 
 ## Next up (open points as of v0.31.2)
 - [ ] Batz: look at the episode page, quiz and voice page on a real phone
@@ -18,11 +18,18 @@ Updated 2026-10-03 (v0.34.4) - see HANDOFF.md for the overall state.
 - [ ] Batz: try the installer's server question on Windows once (hidden
       password input could only be tested on Linux; the rest of the
       Windows part was tested with PowerShell 7).
-- [ ] Batz: on the 3070 PC (CachyOS, NVIDIA driver 580+): ./install.sh
-      --gpu-speakers with 0.34.3, then "qs-podscript gpu-check" (must say
-      GPU-CHECK OK with a gpu time clearly below the cpu time) and
-      "qs-podscript speaker-bench <episode> resnet34 --cpu" vs without --cpu
-      on a full episode. Then decide: Windows GPU part, finer step (1 s).
+- [x] Batz: GPU speaker detection on the 3070 PC works (0.34.3: GPU-CHECK OK
+      cpu=131ms gpu=19ms; ~4 min instead of ~49 for a long episode).
+- [ ] Batz (0.35.0): on the CachyOS PC run ./install.sh of 0.35.0 - it should
+      find the existing GPU part, download nothing and say OK. On a Windows
+      PC with an NVIDIA card (driver 580+): Setup -> Speaker detection ->
+      "Use the graphics card for speaker detection" (or install.cmd), then
+      check the Setup line / "qs-podscript gpu-check". First real Windows
+      test of this - send data\qs-podscript.log if it fails.
+- [ ] Batz: check a full GPU-processed episode for quality (should equal
+      the CPU result; cos=1.00000 in the check).
+- [ ] Possible: finer detection step (1 s) now that the graphics card makes
+      it cheap.
 - [ ] Optional: CF-Connecting-IP support (only if a Cloudflare proxy is ever
       put in front of the server).
 - [ ] Dependabot PRs: merge one at a time after CI is green.
@@ -94,14 +101,13 @@ Design: docs/SPEC.md "Homeserver design".
 - [x] Reasonable default thresholds for all models (v0.28.0): real-audio
       values for ResNet34 (0.5) and TitaNet large (0.96), estimates for the
       others. Fine-tune only if one of them gets used for real.
-- [ ] Worth testing (fixed in 0.34.3, before that it never used the card): GPU speaker detection (./install.sh --gpu-speakers on
-      the RTX 3070 / 1660 Super PC). Correction (v0.29.0): this is NOT a
-      small gain - on the processor speaker detection takes about as long as
-      whisper or longer (Batz's log: "114 voices ... in 49m16s" for one
-      episode), so the graphics card could save a large part of each episode.
-- [ ] Possible: Windows GPU part for speaker detection (same reason).
-- [ ] AMD cards (7900 XTX): no prebuilt ONNX Runtime with ROCm/MIGraphX;
-      Windows could use DirectML. Only if speaker detection time matters there.
+- [x] GPU speaker detection works (0.34.3, RTX 3070: ~10x faster).
+- [x] Windows NVIDIA part + install from Setup instead of only install.sh
+      (0.35.0).
+- [ ] AMD/Intel cards: no prebuilt sherpa-onnx with DirectML (Windows) or
+      ROCm/MIGraphX (Linux) - would mean building sherpa-onnx + ONNX Runtime
+      ourselves (CI job). Only if speaker detection time matters there.
+- [ ] Browser-side processing experiment: tabled (2026-10-04).
 
 ## Look Who's Talking (was "Who's talking?", v0.17.0)
 - [ ] Batz: try it on a real episode; is ~30 s a good passage length? Are the

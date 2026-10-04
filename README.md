@@ -47,8 +47,8 @@ along and search; volunteers fix speakers and words, and their computers
   one). Little JavaScript – the pages work without it.
 - **Graphics cards:** NVIDIA (CUDA), AMD/Intel/NVIDIA (Vulkan) on Windows and
   Linux, Apple Silicon (Metal) on macOS. Speaker detection can run on an
-  NVIDIA card too (Linux, optional: `./install.sh --gpu-speakers`) – around
-  ten times faster than on the processor in a first test.
+  NVIDIA card too (Windows and Linux, one click in Setup or a question in the
+  installer) – around ten times faster than on the processor in a first test.
 - Two looks, each bright or dark: QuickSack (the default) and Classic.
   Works on phones too.
 
@@ -70,7 +70,7 @@ Each package has a `README.txt` with the details.
 | System | Package | Notes |
 |---|---|---|
 | **Windows 10/11** (x64) | `qs-podscript-…-windows-x64.zip` | Unzip, run `install.cmd` (or `qs-podscript.exe` directly). Downloads ffmpeg, whisper.cpp and the models itself. |
-| **Linux** (x64, glibc 2.35+) | `qs-podscript-…-linux-x64.tar.gz` | Unpack, run `./install.sh` – installs ffmpeg, builds a CUDA/Vulkan whisper.cpp if possible, adds a menu entry. `--gpu-speakers`: speaker detection on an NVIDIA card. `--help` for all options. |
+| **Linux** (x64, glibc 2.35+) | `qs-podscript-…-linux-x64.tar.gz` | Unpack, run `./install.sh` – installs ffmpeg, builds a CUDA/Vulkan whisper.cpp if possible, adds a menu entry, offers speaker detection on an NVIDIA card. `--help` for all options. |
 | **macOS** (Apple Silicon) | `qs-podscript-…-macos-arm64.zip` | **New, not tested on a real Mac yet.** Needs `brew install ffmpeg whisper-cpp`. See the package README (Gatekeeper). |
 
 On first start, the **Setup** page downloads the speech and speaker models
@@ -79,9 +79,11 @@ top of every page.
 
 **Hardware:** a graphics card makes transcription many times faster than the
 processor alone. Speaker detection runs on the processor, where it can take
-as long as the transcription or longer – on Linux with an NVIDIA card
-(driver 580+) `./install.sh --gpu-speakers` moves it to the graphics card. Disk: a few GB
-for the models, plus about 11 MB per hour of audio for the listening copies.
+as long as the transcription or longer – with an NVIDIA card (RTX 20 / GTX 16 series or
+newer, driver 580+, Windows or Linux) **Setup → Speaker detection → Use the graphics card** moves
+it there (about 1.5 GB download once; the installers offer it too). Older NVIDIA,
+AMD and Intel cards can't do this part (transcription still uses them). Disk: a few GB for the models, plus about
+11 MB per hour of audio for the listening copies.
 
 ## Shared server
 

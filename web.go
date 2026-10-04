@@ -412,6 +412,7 @@ func (s *Server) routes() http.Handler {
 	mux.HandleFunc("GET /favicon.ico", s.handleFavicon)
 	mux.HandleFunc("GET /setup", s.guard(accessAdmin, s.handleSetupPage))
 	mux.HandleFunc("POST /setup", s.guard(accessAdmin, s.handleSetupStart))
+	mux.HandleFunc("POST /setup/gpu-speakers", s.guard(accessAdmin, s.handleGPUSpeakers))
 	mux.HandleFunc("POST /settings/speakers", s.guard(accessAdmin, s.handleSpeakerSettings))
 	mux.HandleFunc("POST /settings/server-work", s.guard(accessAdmin, s.handleServerWork))
 	mux.HandleFunc("POST /settings/transcription", s.guard(accessAdmin, s.handleTranscriptionSettings))
@@ -610,6 +611,8 @@ func (s *Server) handleSetupPage(w http.ResponseWriter, r *http.Request) {
 		"Device":          speakerDevice(),
 		"DeviceNow":       deviceSummary(),
 		"GPUInstalled":    gpuLibsInstalled(),
+		"GPUWorks":        gpuLibsInstalled() && gpuDoneOK(),
+		"GPUSupport":      gpuSpeakerSupport(),
 		"Steps": []modelOpt{
 			{"0.1", "Precise – checks every second (slowest)"},
 			{"0.25", "Balanced – every 2.5 seconds, about 2.5× faster"},
@@ -725,6 +728,25 @@ func (s *Server) handleSetupStart(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	back(w, r, "/setup", "Installation started. Progress is shown at the top.", "")
+}
+
+func (s *Server) handleGPUSpeakers(w http.ResponseWriter, r *http.Request) {
+	install := r.FormValue("action") == "install"
+	if install {
+		if sup := gpuSpeakerSupport(); !sup.Possible {
+			back(w, r, "/setup#speakers", "", "Not possible here: "+sup.Why+".")
+			return
+		}
+	}
+	if err := s.worker.StartGPUSpeakers(install); err != nil {
+		back(w, r, "/setup#speakers", "", err.Error())
+		return
+	}
+	if install {
+		back(w, r, "/setup#speakers", "Downloading graphics card support for speaker detection. Progress is shown at the top; when it's done, this section shows whether the graphics card works.", "")
+		return
+	}
+	back(w, r, "/setup#speakers", "Removing graphics card support – speaker detection runs on the processor.", "")
 }
 
 // ------------------------------------------------------------ feeds

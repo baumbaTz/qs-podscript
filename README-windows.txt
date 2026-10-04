@@ -18,6 +18,13 @@ INSTALL (recommended)
        AMD Radeon / Intel Arc -> Vulkan
        nothing suitable -> processor (slower, but works)
    - downloads ffmpeg, whisper.cpp and the models (about 2.5 GB, once)
+   - with an NVIDIA card of the RTX 20 / GTX 16 series or newer (driver 580
+     or newer): offers speaker detection on
+     the graphics card too - about ten times faster than on the processor;
+     about 1.5 GB more download (NVIDIA's CUDA 13 and cuDNN 9 libraries, kept
+     inside the QS-PodScript folder). Also later: Setup -> Speaker detection.
+     Older NVIDIA cards (GTX 10 and before), AMD and Intel cards can't do
+     this part (transcription still uses them).
    - creates a Start menu entry, optionally a desktop shortcut and autostart
    - writes uninstall.cmd into the install folder
 
@@ -30,6 +37,8 @@ INSTALL (recommended)
     install.cmd -y                 answer every question with yes
     install.cmd -n                 answer every question with no
     install.cmd -Defaults          no questions, default answers
+    install.cmd -GpuSpeakers       speaker detection on the NVIDIA card, no question
+    install.cmd -NoGpuSpeakers     speaker detection on the processor (removes that part)
 
 USE
   Start "QS-PodScript" from the Start menu. A small window opens (keep it open)

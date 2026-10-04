@@ -128,14 +128,35 @@
 <h2 class="section-title">Speaker detection</h2>
 <p class="sub narrow">Speed versus accuracy of telling voices apart. Changes apply to episodes transcribed from now on – use "Redo speaker detection" on one episode and compare its versions. Stored voiceprints always use the same model, so they stay comparable across episodes.</p>
 {{$d := .Data.Diarize}}
+{{$gs := .Data.GPUSupport}}
+<form method="post" action="/setup/gpu-speakers" class="form" id="gpu-speakers">
+  <fieldset>
+    <legend>Graphics card</legend>
+    <p class="sub">Speaker detection runs on: <b>{{.Data.DeviceNow}}</b></p>
+    {{if .Data.GPUInstalled}}
+    <small>Graphics card support is installed (about 2 GB inside the QS-PodScript folder). Choose below whether to use it.{{if not .Data.GPUWorks}} If the graphics card can't be used, “Install again” downloads everything once more.{{end}}</small>
+    <div class="row-buttons">
+      {{if not .Data.GPUWorks}}<button type="submit" name="action" value="install" {{if ne .Status.Job ""}}disabled{{end}}>Install again</button>{{end}}
+      <button type="submit" name="action" value="remove" class="quiet" {{if ne .Status.Job ""}}disabled{{end}}>Remove graphics card support</button>
+    </div>
+    {{else if $gs.Possible}}
+    <small>Your <b>{{$gs.Card}}</b> can do speaker detection many times faster than the processor – on an RTX 3070 a long episode took about 4 minutes instead of 50. This needs a one-time download of about {{$gs.SizeMB}} MB (NVIDIA's CUDA and cuDNN libraries and the speaker detection library built for them, kept inside the QS-PodScript folder). It is tested right after the download; QS-PodScript uses the processor whenever the graphics card doesn't work.</small>
+    <button type="submit" name="action" value="install" {{if ne .Status.Job ""}}disabled{{end}}>Use the graphics card for speaker detection</button>
+    {{else}}
+    <small>It stays on the processor: {{$gs.Why}}.</small>
+    {{end}}
+  </fieldset>
+</form>
 <form method="post" action="/settings/speakers" class="form">
+  {{if .Data.GPUInstalled}}
   <fieldset>
     <legend>Runs on</legend>
-    <p class="sub">Now: <b>{{.Data.DeviceNow}}</b></p>
-    <label class="radio"><input type="radio" name="device" value="auto" {{if ne .Data.Device "cpu"}}checked{{end}}> The graphics card when it works (NVIDIA), otherwise the CPU</label>
+    <label class="radio"><input type="radio" name="device" value="auto" {{if ne .Data.Device "cpu"}}checked{{end}}> The graphics card when it works, otherwise the CPU</label>
     <label class="radio"><input type="radio" name="device" value="cpu" {{if eq .Data.Device "cpu"}}checked{{end}}> Always the CPU</label>
-    {{if not .Data.GPUInstalled}}<small>Graphics card support for speaker detection is an optional part of the Linux installer (NVIDIA only, about 1.3 GB download): <code>./install.sh --gpu-speakers</code></small>{{end}}
   </fieldset>
+  {{else}}
+  <input type="hidden" name="device" value="{{.Data.Device}}">
+  {{end}}
   <fieldset>
     <legend>Voice model</legend>
     <small>Each model measures “how different” two voices are on its own scale, so each has its own separation threshold (lower finds more separate voices). Time is on the CPU, compared with ResNet34 – on the graphics card all of them are much faster. Compare on the same episode with “Redo speaker detection” (episode page) or <code>qs-podscript speaker-bench &lt;audio file&gt;</code>.</small>

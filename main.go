@@ -14,7 +14,7 @@ import (
 	"time"
 )
 
-const version = "0.34.4"
+const version = "0.35.0"
 
 const usageText = `QS-PodScript ` + version + ` - podcast transcription with speaker detection
 
@@ -40,6 +40,10 @@ Setup:
   setup [--model NAME] [--cpu] [--force]   download ffmpeg, whisper.cpp and models
                                           models: ` + "turbo (default), turbo-q5, large-v3, medium.en, small.en, base.en" + `
   check                                   self-test: ffmpeg, whisper (GPU?), diarization
+  gpu-speakers [install|remove|status]    speaker detection on the NVIDIA graphics card
+                                          (Windows / Linux; same as Setup -> Speaker detection;
+                                          about 1.5 GB download, needs NVIDIA driver 580+)
+  gpu-check                               test it: voiceprint on processor vs graphics card
   config [key] [value]                    show or change settings:
                                             diarize_model (resnet34 | resnet152 | resnet221 | resnet293 |
                                               titanet | titanet-large | eres2net | campplus | campplus-3d)
@@ -83,8 +87,10 @@ func main() {
 		os.Exit(1)
 	}
 	initLogging()
-	internal := len(os.Args) > 1 && (os.Args[1] == "gpu-check" || os.Args[1] == "diarize-file")
+	internal := len(os.Args) > 1 && (os.Args[1] == "gpu-check" || os.Args[1] == "diarize-file" || os.Args[1] == "lib-check")
 	if !internal { // never from a helper process while the app itself runs
+		cleanupOldLibs()                            // replaced graphics card libraries (Windows)
+		reapplyGPUSpeakers()                        // after an update that brought the normal libraries back
 		if err := applyStagedImport(); err != nil { // data from another computer, prepared before the restart
 			logf("ERROR: %v", err)
 		}
@@ -123,6 +129,10 @@ func main() {
 		err = cmdConfig(args[1:])
 	case "gpu-check":
 		err = cmdGPUCheck(args[1:])
+	case "gpu-speakers":
+		err = cmdGPUSpeakers(ctx, args[1:])
+	case "lib-check":
+		err = cmdLibCheck()
 	case "diarize-file":
 		err = cmdDiarizeFile(args[1:])
 	case "speaker-bench":

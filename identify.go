@@ -78,7 +78,7 @@ type embedder struct {
 }
 
 func newEmbedder() (*embedder, error) {
-	prov := providerNow()
+	prov := inProcessProvider()
 	guard := gpuGuard(prov)
 	ex := sherpa.NewSpeakerEmbeddingExtractor(&sherpa.SpeakerEmbeddingExtractorConfig{
 		Model: embeddingModelPath(), NumThreads: sherpaThreads(), Provider: prov,

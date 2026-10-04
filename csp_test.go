@@ -6,6 +6,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"regexp"
+	"runtime"
 	"strings"
 	"testing"
 )
@@ -93,17 +94,57 @@ func TestConnectNeedsUser(t *testing.T) {
 	}
 }
 
-// install.sh downloads sherpa-onnx's GPU build; it must be the same version
+// gpuspeakers.go downloads sherpa-onnx's GPU build; it must be the same version
 // as the Go binding (the C API must match).
 func TestGPUSherpaVersionMatchesGoMod(t *testing.T) {
 	mod, _ := os.ReadFile("go.mod")
-	sh, _ := os.ReadFile("install.sh")
 	m := regexp.MustCompile(`k2-fsa/sherpa-onnx-go v(\S+)`).FindSubmatch(mod)
-	v := regexp.MustCompile(`SHERPA_GPU_VERSION="([^"]+)"`).FindSubmatch(sh)
-	if m == nil || v == nil {
-		t.Fatal("version not found in go.mod or install.sh")
+	if m == nil {
+		t.Fatal("sherpa-onnx-go not found in go.mod")
 	}
-	if string(m[1]) != string(v[1]) {
-		t.Errorf("install.sh SHERPA_GPU_VERSION %s, go.mod sherpa-onnx-go %s – update the GPU download (name + sha256) too", v[1], m[1])
+	if string(m[1]) != sherpaGPUVersion {
+		t.Errorf("sherpaGPUVersion %s, go.mod sherpa-onnx-go %s – update the GPU downloads in gpuspeakers.go (names + sha256) too", sherpaGPUVersion, m[1])
+	}
+	for goos, p := range gpuSpeakerPkgs {
+		if !strings.Contains(p.Archive.URL, p.Name) || len(p.Archive.SHA256) != 64 {
+			t.Errorf("%s: archive URL/sha256 doesn't fit %s", goos, p.Name)
+		}
+		for _, w := range p.Wheels {
+			if len(w.SHA256) != 64 || !strings.HasPrefix(w.URL, "https://") {
+				t.Errorf("%s: bad wheel %s", goos, w.URL)
+			}
+		}
+	}
+}
+
+func TestNvidiaLibFilter(t *testing.T) {
+	cases := map[string]string{
+		"nvidia/cu13/lib/libcudart.so.13":         "libcudart.so.13",
+		"nvidia/cu13/lib/libnvblas.so.13":         "",
+		"nvidia/cu13/include/cuda.h":              "",
+		"nvidia_cublas-13.8.0.4.dist-info/RECORD": "",
+	}
+	if runtime.GOOS == "windows" {
+		cases = map[string]string{"nvidia/cu13/bin/x86_64/cudart64_13.dll": "cudart64_13.dll", "nvidia/cu13/lib/x64/cudart.lib": ""}
+	}
+	for in, want := range cases {
+		if got := nvidiaLibFilter(in); got != want {
+			t.Errorf("%s: got %q, want %q", in, got, want)
+		}
+	}
+}
+
+func TestComputeCapFromName(t *testing.T) {
+	for name, want := range map[string]float64{
+		"NVIDIA GeForce RTX 3070": 7.5, "NVIDIA GeForce GTX 1660 SUPER": 7.5,
+		"NVIDIA GeForce GT 1030": 6.1, "NVIDIA GeForce GTX 1080 Ti": 6.1,
+		"NVIDIA GeForce GTX 970": 5.2, "NVIDIA TITAN V": 7.0,
+	} {
+		if got, ok := computeCapFromName(name); !ok || got != want {
+			t.Errorf("%s: got %v %v, want %v", name, got, ok, want)
+		}
+	}
+	if _, ok := computeCapFromName("Some future card"); ok {
+		t.Error("unknown name should be unclear")
 	}
 }

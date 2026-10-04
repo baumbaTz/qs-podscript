@@ -114,6 +114,18 @@ func (w *Worker) StartSetup(model, gpuMode string, force bool) error {
 	})
 }
 
+// StartGPUSpeakers installs (or removes) graphics card support for speaker
+// detection; shown like the setup job.
+func (w *Worker) StartGPUSpeakers(install bool) error {
+	return w.start("setup", func(hard, soft context.Context) error {
+		if !install {
+			return removeGPUSpeakers()
+		}
+		_, err := installGPUSpeakers(hard, false)
+		return err
+	})
+}
+
 func (w *Worker) StartRediarize(src Version) error {
 	return w.start("queue", func(hard, soft context.Context) error {
 		return rediarizeVersion(hard, w.st, src)

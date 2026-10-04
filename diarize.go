@@ -48,10 +48,10 @@ func diarizationConfig(o DiarizeOpts) *sherpa.OfflineSpeakerDiarizationConfig {
 	c.Segmentation.Pyannote.Model = segmentationModelPath()
 	c.Segmentation.Pyannote.WindowShiftRatio = o.Step
 	c.Segmentation.NumThreads = sherpaThreads()
-	c.Segmentation.Provider = providerNow()
+	c.Segmentation.Provider = inProcessProvider()
 	c.Embedding.Model = diarizeModelPath(o.Model)
 	c.Embedding.NumThreads = sherpaThreads()
-	c.Embedding.Provider = providerNow()
+	c.Embedding.Provider = inProcessProvider()
 	if numSpeakers > 0 {
 		c.Clustering.NumClusters = numSpeakers
 	} else {
@@ -202,7 +202,7 @@ const (
 )
 
 func clusterEmbeddings(samples []float32, turns []Turn) ([]ClusterEmbedding, error) {
-	prov := providerNow()
+	prov := inProcessProvider()
 	defer gpuGuard(prov)()
 	ex := sherpa.NewSpeakerEmbeddingExtractor(&sherpa.SpeakerEmbeddingExtractorConfig{
 		Model:      embeddingModelPath(),

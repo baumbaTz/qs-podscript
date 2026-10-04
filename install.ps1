@@ -20,6 +20,9 @@
 #   -Dir PATH            install folder (default: %LOCALAPPDATA%\qs-podscript)
 #   -Desktop / -Autostart / -NoAutostart
 #   -NoSetup             only copy files (no downloads)
+#   -GpuSpeakers         speaker detection on the NVIDIA graphics card too,
+#                        without asking (about 1.5 GB download; also in Setup)
+#   -NoGpuSpeakers       speaker detection on the processor (removes that part)
 #   Connect to a shared server (like Setup -> "Add a server"; without these
 #   the installer asks once, unless a server is saved already):
 #   -Connect ADDRESS     the server, e.g. https://transcribe.example.org
@@ -38,6 +41,8 @@ param(
     [switch]$Autostart,
     [switch]$NoAutostart,
     [switch]$NoSetup,
+    [switch]$GpuSpeakers,
+    [switch]$NoGpuSpeakers,
     [string]$Connect = '',
     [string]$ConnectUser = '',
     [string]$ConnectLabel = '',
@@ -191,25 +196,70 @@ $ver = (& (Join-Path $Dir 'qs-podscript.exe') version) 2>$null
 Ok "$ver installed"
 if ((Test-Path (Join-Path $Dir 'data\qs-podscript.db')) -or (Test-Path (Join-Path $Dir 'data\podscribe.db'))) { Ok "Existing transcripts and settings kept" }
 
-# ---------------------------------------------------------------- setup
-if (-not $NoSetup) {
-    Step "Downloading tools and models (about 2.5 GB the first time)"
-    Info "This can take a while. The graphics card options are tested one by one."
-    Write-Host ""
-    & (Join-Path $Dir 'qs-podscript.exe') setup --gpu $Gpu --model $Model
-    if ($LASTEXITCODE -ne 0) { Fail "Setup failed (see above). Fix the problem and run the installer again - finished downloads are kept." }
-}
-
-# ---------------------------------------------------------------- shared server (optional)
-# Same as Setup -> "Where you work" -> "Add a server". The password is read
-# hidden, handed to qs-podscript through an environment variable and never
-# written to the install log.
 $exe = Join-Path $Dir 'qs-podscript.exe'
 function Invoke-QS([string[]]$a) {
     $prev = $ErrorActionPreference; $ErrorActionPreference = 'Continue'
     try { $out = (& $exe @a 2>&1 | Out-String) } finally { $ErrorActionPreference = $prev }
     return @{ Code = $LASTEXITCODE; Out = $out }
 }
+
+# ---------------------------------------------------------------- setup
+if (-not $NoSetup) {
+    Step "Downloading tools and models (about 2.5 GB the first time)"
+    Info "This can take a while. The graphics card options are tested one by one."
+    Write-Host ""
+    & $exe setup --gpu $Gpu --model $Model
+    if ($LASTEXITCODE -ne 0) { Fail "Setup failed (see above). Fix the problem and run the installer again - finished downloads are kept." }
+}
+
+# ---------------------------------------------------------------- speaker detection on the graphics card
+# Optional (NVIDIA only). QS-PodScript does the work itself (same as Setup ->
+# Speaker detection): sherpa-onnx's GPU build, NVIDIA's CUDA 13 / cuDNN 9
+# libraries and the Visual C++ runtime (pinned versions, checked by SHA-256),
+# then a test. An update that brings the normal libraries back is fixed by
+# QS-PodScript at its next start.
+$gpuSpkDir = Join-Path $Dir 'data\tools\onnxruntime-gpu'
+function Install-GpuSpeakers {
+    & $exe gpu-speakers install
+    switch ($LASTEXITCODE) {
+        0 { Ok "Speaker detection uses the graphics card (see above)." }
+        2 { Warn "Not possible on this computer (see above) - speaker detection runs on the processor." }
+        default { Warn "QS-PodScript uses the processor for speaker detection. Remove this part again with: install.cmd -NoGpuSpeakers (or in Setup)." }
+    }
+}
+if ($NoGpuSpeakers) {
+    if ((Test-Path $gpuSpkDir) -or (Test-Path (Join-Path $Dir 'cuda'))) {
+        Step "Speaker detection on the graphics card"
+        $null = Invoke-QS @('gpu-speakers', 'remove')
+        Ok "Removed - speaker detection runs on the processor"
+    }
+}
+elseif (-not $NoSetup -and $Gpu -ne 'cpu') {
+    if (Test-Path $gpuSpkDir) {
+        Step "Speaker detection on the graphics card"
+        Info "Updating and testing it (downloads only what changed)"
+        Install-GpuSpeakers
+    }
+    else {
+        $st = (Invoke-QS @('gpu-speakers', 'status')).Out
+        if ($st -match 'GPU-SPEAKERS POSSIBLE') {
+            Step "Speaker detection on the graphics card"
+            Info "Speaker detection (telling voices apart) takes about as long as the transcription on the processor."
+            Info "On your NVIDIA card it is many times faster. This downloads about 1.5 GB of NVIDIA libraries once."
+            if ($GpuSpeakers -or (Ask "Use the graphics card for speaker detection too?" $true)) { Install-GpuSpeakers }
+            else { Info "Speaker detection runs on the processor (add it later: Setup -> Speaker detection)." }
+        }
+        elseif ($GpuSpeakers) {
+            Step "Speaker detection on the graphics card"
+            Warn (($st -split "`r?`n" | Where-Object { $_ -like 'GPU-SPEAKERS*' } | Select-Object -First 1) -replace '^GPU-SPEAKERS \w+ ', 'Not possible here: ')
+        }
+    }
+}
+
+# ---------------------------------------------------------------- shared server (optional)
+# Same as Setup -> "Where you work" -> "Add a server". The password is read
+# hidden, handed to qs-podscript through an environment variable and never
+# written to the install log.
 function Connect-Server {
     for ($try = 1; $try -le 3; $try++) {
         $sec = Read-Host "   ?   Password for $ConnectUser on the server" -AsSecureString

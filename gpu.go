@@ -192,10 +192,19 @@ func resetGPUCheck() {
 	startGPUCheck()
 }
 
+// gpuDoneOK: the check ran and passed (without waiting for it).
+func gpuDoneOK() bool {
+	if !gpuMu.TryLock() {
+		return false
+	}
+	defer gpuMu.Unlock()
+	return gpuDone && gpuRes.OK
+}
+
 // deviceSummary: one line for the Setup page / manual.
 func deviceSummary() string {
 	if !gpuLibsInstalled() {
-		return "CPU (graphics card support for speaker detection is not installed)"
+		return "CPU"
 	}
 	if !gpuMu.TryLock() {
 		return "checking the graphics card …"
@@ -242,7 +251,7 @@ func runGPUCheck() (cudaGPUInfo, bool) {
 	g.Detail = errorLines(text)
 	switch {
 	case strings.Contains(text, "GPU-CHECK NO-GPU") || strings.Contains(text, "Fallback to cpu"):
-		g.Reason = "the speaker detection library has no graphics card support – run the installer of 0.34.3 or newer with --gpu-speakers"
+		g.Reason = "the speaker detection library next to the program has no graphics card support (an update put the normal one back?) – install graphics card support again (Setup → Speaker detection)"
 	case strings.Contains(text, "GPU-CHECK OK"):
 		g.OK = true
 		g.Name = gpuName()
@@ -250,6 +259,8 @@ func runGPUCheck() (cudaGPUInfo, bool) {
 		g.Reason = "results on the graphics card differ from the CPU"
 	case strings.Contains(text, "libcuda.so") || strings.Contains(text, "nvcuda.dll") || strings.Contains(text, "driver version is insufficient"):
 		g.Reason = "the NVIDIA driver is missing or too old (CUDA 13 needs driver 580 or newer)"
+	case strings.Contains(text, "no kernel image") || strings.Contains(text, "ARCH_MISMATCH") || strings.Contains(text, "not supported on this GPU"):
+		g.Reason = "this graphics card is too old for CUDA 13 (needs a GeForce RTX 20 / GTX 16 series card or newer)"
 	case strings.Contains(text, "cudnn"):
 		g.Reason = "cuDNN (NVIDIA library) is missing or doesn't fit – run the installer again"
 	case strings.Contains(text, "libcu") || strings.Contains(text, "libnvrtc") || strings.Contains(text, "cublas") || strings.Contains(text, "cudart"):

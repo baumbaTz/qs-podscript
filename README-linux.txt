@@ -21,19 +21,26 @@ EASIEST: run the installer from this folder
   (default: no). Options: ./install.sh --help
 
 SPEAKER DETECTION ON THE GRAPHICS CARD (optional, NVIDIA only)
-  ./install.sh --gpu-speakers
   Speaker detection (telling voices apart) normally runs on the processor and
   takes as long as the transcription or longer; on the graphics card it was
   about ten times faster in a first test (RTX 3070: ~4 minutes for an episode
-  of over an hour). With this option the installer
-  adds sherpa-onnx's graphics-card build (the speaker detection library with
-  CUDA support, plus its ONNX Runtime) and the NVIDIA libraries it needs
-  (CUDA 13, cuDNN 9 - about 1.3 GB download, 2 GB on disk, kept inside the
-  QS-PodScript folder). Before 0.34.3 this option installed a library
-  without graphics card support - run it again to get the working one.
-  Check: qs-podscript gpu-check (prints the times on CPU and graphics card). Needs NVIDIA driver 580 or newer (nvidia-smi shows
-  "CUDA Version: 13.x"). QS-PodScript tests it at every start and uses the
-  processor whenever it doesn't work. Remove it: ./install.sh --no-gpu-speakers
+  of over an hour). Switch it on in QS-PodScript: Setup -> Speaker detection
+  -> "Use the graphics card for speaker detection". install.sh asks too when
+  it finds an NVIDIA card (--gpu-speakers: without asking), and so does
+    qs-podscript gpu-speakers install       (status / remove)
+  It downloads sherpa-onnx's graphics-card build (the speaker detection
+  library with CUDA support, plus its ONNX Runtime) and the NVIDIA libraries
+  it needs (CUDA 13, cuDNN 9 - about 1.3 GB download, 2 GB on disk, kept
+  inside the QS-PodScript folder; libraries already installed on the system
+  are used instead), then tests it. Needs a GeForce RTX 20 / GTX 16 series
+  card or newer and NVIDIA driver 580 or newer
+  (nvidia-smi shows "CUDA Version: 13.x"). QS-PodScript tests it at every
+  start and uses the processor whenever it doesn't work.
+  Check: qs-podscript gpu-check (prints the times on CPU and graphics card).
+  Remove it: Setup, qs-podscript gpu-speakers remove, or ./install.sh --no-gpu-speakers
+  Older NVIDIA cards (GTX 10 series and before; CUDA 13 dropped them), AMD
+  and Intel cards: no ready-made speaker detection for them - it stays on
+  the processor (transcription uses them through Vulkan).
   Compare speed and voice models on one episode (nothing is saved):
     qs-podscript speaker-bench episode.mp3 [resnet34,resnet293,titanet-large] [--cpu]
 

@@ -210,6 +210,8 @@ button.quiet:not(:disabled):hover, .button.quiet:hover { border-color: var(--ink
 }
 .form input[size] { width: auto; justify-self: start; }
 .form button { justify-self: start; }
+.row-buttons { display: flex; flex-wrap: wrap; gap: .5rem; }
+#gpu-speakers { margin-bottom: 1.5rem; }
 .form fieldset { border: 0; padding: 0; margin: 0; display: grid; gap: .35rem; }
 .form legend { font-weight: 600; font-size: .9rem; margin-bottom: .35rem; }
 .form label.radio { display: flex; gap: .5rem; font-weight: 400; align-items: baseline; }
