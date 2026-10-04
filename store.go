@@ -6,6 +6,8 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"sort"
+	"strings"
 	"time"
 
 	_ "github.com/mattn/go-sqlite3"
@@ -437,7 +439,19 @@ func (s *Store) Feeds() ([]Feed, error) {
 		}
 		out = append(out, f)
 	}
-	return out, rows.Err()
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	// podcasts are always listed alphabetically (not by id / time added);
+	// same ordering the users page already uses; id keeps equal titles stable
+	sort.SliceStable(out, func(i, j int) bool {
+		a, b := strings.ToLower(out[i].Title), strings.ToLower(out[j].Title)
+		if a != b {
+			return a < b
+		}
+		return out[i].ID < out[j].ID
+	})
+	return out, nil
 }
 
 func (s *Store) Feed(id int64) (Feed, error) {

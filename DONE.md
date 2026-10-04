@@ -1,5 +1,11 @@
 # DONE
 
+## 2026-10-04 – v0.35.1 – podcast list always alphabetical
+- Store.Feeds() (store.go) now sorts podcasts by title, case-insensitive,
+  instead of by id / time added. Because every list goes through it, this
+  covers the podcasts page, the search dropdown, the API (/api podcasts),
+  the sitemap and `feed list` in one place. Equal titles fall back to id.
+
 ## 2026-10-04 – v0.35.0 – speaker detection on the graphics card from Setup, also on Windows
 - Setup → Speaker detection has a "Graphics card" part now: with an NVIDIA
   card (driver 580 or newer) on Windows or Linux, "Use the graphics card for
