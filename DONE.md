@@ -1,5 +1,15 @@
 # DONE
 
+## 2026-10-06 – v0.36.1 – header: no local Setup/Queue in the menu while working on a server
+- layout.html: when you are switched to a server (server pages opened through the
+  local app, or the local app's own pages while a server is the active place) the
+  menu no longer shows this computer's Setup and Queue. "This computer's setup" and
+  "This computer's queue" are now in the place menu (the Server badge), next to
+  "Manage servers…". Activity stays (it has the This computer | Server tabs).
+- Setup stays in the menu when it is the page you are on, or when this computer's
+  setup is not ready (the "Setup needed" dot). Without a place menu (old local
+  app) the old links stay.
+
 ## 2026-10-06 – v0.36.0 – podcast page: one "Podcast settings" panel with tabs; search box in the header
 - Podcast page (feed.html): the four collapsible blocks (Podcast settings, Feeds,
   People on this podcast, Spelling fixes) are now one panel "Podcast settings" with

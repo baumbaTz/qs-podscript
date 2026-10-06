@@ -42,10 +42,11 @@
     <form class="navsearch" method="get" action="{{.ContentBase}}/search" role="search">
       <input type="search" name="q" placeholder="Search" aria-label="Search the transcripts" accesskey="s" title="Search the transcripts (Alt+Shift+S)">
     </form>{{end}}
-    {{if .ViaLocal}}<a href="{{.LocalBase}}/setup" title="The settings of your own computer">Setup</a>
-    <a href="{{.LocalBase}}/queue" title="What your computer works on">Queue</a>
-    {{else if .IsAdmin}}<a href="/setup" {{if eq .Nav "setup"}}aria-current="page"{{end}}>Setup{{if not .Setup.Ready}}{{if not .ServerMode}} <span class="dot" title="Setup needed"></span>{{end}}{{end}}</a>
-    <a href="/queue" {{if eq .Nav "queue"}}aria-current="page"{{end}}>Queue</a>{{end}}
+    {{/* while working on a server, the computer's own Setup and Queue are in the place menu (they stay here when they are the current page, or when Setup is needed) */}}
+    {{if .ViaLocal}}{{if not .Places}}<a href="{{.LocalBase}}/setup" title="The settings of your own computer">Setup</a>
+    <a href="{{.LocalBase}}/queue" title="What your computer works on">Queue</a>{{end}}
+    {{else if .IsAdmin}}{{if or (not .OnServer) (not .Setup.Ready) (eq .Nav "setup")}}<a href="/setup" {{if eq .Nav "setup"}}aria-current="page"{{end}}>Setup{{if not .Setup.Ready}}{{if not .ServerMode}} <span class="dot" title="Setup needed"></span>{{end}}{{end}}</a>{{end}}
+    {{if or (not .OnServer) (eq .Nav "queue")}}<a href="/queue" {{if eq .Nav "queue"}}aria-current="page"{{end}}>Queue</a>{{end}}{{end}}
     {{if .LoggedIn}}<a href="{{.ContentBase}}/people" {{if eq .Nav "people"}}aria-current="page"{{end}}>People</a>{{end}}
     {{if .ViaLocal}}<a href="{{.LocalBase}}/log" title="What your computer did">Activity</a>
     {{else if .IsAdmin}}<a href="/log" {{if eq .Nav "log"}}aria-current="page"{{end}}>Activity</a>{{end}}
@@ -89,6 +90,8 @@
       <button type="submit" class="place-opt"{{if .Active}} aria-current="true" disabled{{end}}>{{if .Active}}✓ {{end}}{{.Name}}{{if eq .ID 0}} <small>your own podcasts</small>{{end}}</button>
     </form>{{end}}
     {{if and .ViaLocal .User}}<p class="place-who">Logged in as <b>{{.User.Name}}</b></p>{{end}}
+    {{if .OnServer}}<a class="place-manage" href="{{.LocalBase}}/setup" title="The settings of your own computer">This computer's setup</a>
+    <a class="place-manage" href="{{.LocalBase}}/queue" title="What your computer works on">This computer's queue</a>{{end}}
     <a class="place-manage" href="{{.LocalBase}}/setup#places">Manage servers…</a>
   </div>
 </details>
