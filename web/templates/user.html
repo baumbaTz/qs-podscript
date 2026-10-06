@@ -33,6 +33,29 @@
 </details>
 {{end}}
 
+{{if not .Data.Own}}{{$feeds := .Data.Feeds}}{{$self := and .User (eq .User.ID $u.ID)}}
+<section class="panel" id="access">
+  <h2 class="section-title">Rights and password</h2>
+  <form method="post" action="/users/{{$u.ID}}" class="form">
+    <label class="radio"><input type="checkbox" name="admin" value="1" {{if eq $u.Role "admin"}}checked{{end}} {{if $self}}disabled{{end}}> Admin (may do everything)</label>
+    {{if $self}}<input type="hidden" name="admin" value="1">{{end}}
+    <fieldset id="rights">
+      <legend>May edit these podcasts</legend>
+      {{if $feeds}}<p class="rights-toggle">{{if .Data.AllRights}}<a class="button quiet small" href="/users/{{$u.ID}}?preset=none#rights">Select none</a>{{else}}<a class="button quiet small" href="/users/{{$u.ID}}?preset=all#rights">Select all</a>{{end}}{{if .Data.Preset}} <small class="sub">Not saved yet – change what you like, then press Save.</small>{{end}}</p>{{end}}
+      {{range $feeds}}<label class="radio"><input type="checkbox" name="podcast" value="{{.ID}}" {{if index $.Data.Rights .ID}}checked{{end}}> {{.Title}}</label>{{else}}<small>No podcasts yet.</small>{{end}}
+    </fieldset>
+    <label>New password <input type="password" name="password" autocomplete="new-password" placeholder="leave empty to keep it"></label>
+    <button type="submit">Save</button>
+  </form>
+  {{if not $self}}
+  <form method="post" action="/users/{{$u.ID}}/delete" class="form">
+    <label class="radio"><input type="checkbox" name="confirm" value="1" required> Remove {{$u.Name}} (their corrections stay)</label>
+    <button type="submit" class="danger">Remove user</button>
+  </form>
+  {{end}}
+</section>
+{{end}}
+
 <section>
   <h2 class="section-title">Connected computers</h2>
   <p class="sub narrow">Computers that connected their QS-PodScript with this account. Removing one ends its access: it can no longer transcribe for the server or show the server's podcasts until it connects again.</p>

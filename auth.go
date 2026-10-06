@@ -615,13 +615,12 @@ func isHTTPS(r *http.Request) bool {
 
 func (s *Server) handleUsers(w http.ResponseWriter, r *http.Request) {
 	users, _ := s.st.Users()
-	feeds, _ := s.st.Feeds()
-	sort.Slice(feeds, func(i, j int) bool { return strings.ToLower(feeds[i].Title) < strings.ToLower(feeds[j].Title) })
+	sort.SliceStable(users, func(i, j int) bool { return strings.ToLower(users[i].Name) < strings.ToLower(users[j].Name) })
 	stats := map[int64]UserStats{}
 	for _, u := range users {
 		stats[u.ID] = s.st.UserStats(u.ID)
 	}
-	s.render(w, r, "users", "Users", "users", map[string]any{"Users": users, "Feeds": feeds, "Me": currentUser(r), "Stats": stats})
+	s.render(w, r, "users", "Users", "users", map[string]any{"Users": users, "Stats": stats})
 }
 
 func (s *Server) handleUserAdd(w http.ResponseWriter, r *http.Request) {
@@ -636,7 +635,7 @@ func (s *Server) handleUserAdd(w http.ResponseWriter, r *http.Request) {
 	}
 	logf("User added: %s (%s) by %s", r.FormValue("name"), role, currentUser(r).Name)
 	s.st.Audit(currentUser(r).ID, actUserAdmin, 0, 0, 0, "added "+r.FormValue("name"))
-	back(w, r, fmt.Sprintf("/users#u%d", id), "User added. Tick the podcasts they may edit.", "")
+	back(w, r, fmt.Sprintf("/users/%d#rights", id), "User added. Tick the podcasts they may edit.", "")
 }
 
 func (s *Server) handleUserUpdate(w http.ResponseWriter, r *http.Request) {
@@ -645,7 +644,7 @@ func (s *Server) handleUserUpdate(w http.ResponseWriter, r *http.Request) {
 		http.NotFound(w, r)
 		return
 	}
-	to := fmt.Sprintf("/users#u%d", id)
+	to := fmt.Sprintf("/users/%d", id)
 	if err := r.ParseForm(); err != nil {
 		back(w, r, to, "", err.Error())
 		return
@@ -694,7 +693,7 @@ func (s *Server) handleUserDelete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if r.FormValue("confirm") != "1" {
-		back(w, r, fmt.Sprintf("/users#u%d", id), "", "Tick the box to confirm.")
+		back(w, r, fmt.Sprintf("/users/%d", id), "", "Tick the box to confirm.")
 		return
 	}
 	if err := s.st.DeleteUser(id); err != nil {

@@ -1,5 +1,16 @@
 # DONE
 
+## 2026-10-06 – v0.37.0 – users: tiles, one page per user with rights and password
+- Users page (users.html): every user is a tile (name, admin/editor tag, transcribed /
+  cleaned up / last active) that opens the user's page. Sorted alphabetically (not
+  case sensitive, also umlauts), explicitly in handleUsers.
+- User page (user.html, admins): new panel "Rights and password": admin box, the
+  podcasts the user may edit (alphabetical), new password, Save, Remove user.
+  "Select all" / "Select none" (one link that switches) reloads the page with all
+  boxes ticked / unticked – nothing is saved until Save, so removing one podcast from
+  a user who has all of them is: Select all, untick one, Save. No JavaScript.
+- Saving / adding a user now goes to the user's page (add: straight to the podcasts).
+
 ## 2026-10-06 – v0.36.1 – header: no local Setup/Queue in the menu while working on a server
 - layout.html: when you are switched to a server (server pages opened through the
   local app, or the local app's own pages while a server is the active place) the

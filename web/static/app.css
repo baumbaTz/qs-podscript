@@ -520,6 +520,15 @@ button.danger { background: var(--err); border-color: var(--err); color: var(--p
 .sources .url { overflow-wrap: anywhere; }
 .sources .row-actions { text-align: right; width: 1%; white-space: nowrap; padding-right: 0; }
 .tag-soft { font-size: .75rem; color: var(--ink-soft); border: 1px solid var(--rule); border-radius: 3px; padding: 0 .3rem; margin-left: .3rem; font-weight: 400; }
+/* users page: one tile per user, leads to the user's page */
+.user-tiles { list-style: none; margin: 0 0 1.5rem; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr)); gap: 1rem; }
+.user-tile { display: flex; flex-direction: column; gap: .35rem; min-height: 8.5rem; margin: 0; color: var(--ink); text-decoration: none; }
+.user-tile:hover, .user-tile:focus-visible { border-color: var(--link); }
+.user-tile .ut-name { font-weight: 700; font-size: 1.2rem; overflow-wrap: anywhere; }
+.user-tile .ut-tags { display: flex; flex-wrap: wrap; gap: .25rem; }
+.user-tile .ut-tags .tag-soft { margin-left: 0; }
+.user-tile .ut-meta { color: var(--ink-soft); font-size: .85rem; }
+.rights-toggle { margin: 0 0 .25rem; }
 .episodes .src { display: block; }
 #feeds .inline-form { max-width: 640px; }
 /* export / import */

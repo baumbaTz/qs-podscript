@@ -446,13 +446,36 @@ func (s *Server) renderRecord(w http.ResponseWriter, r *http.Request, u *User, o
 	if own {
 		title, nav = "Your account", "account"
 	}
-	s.render(w, r, "user", title, nav, map[string]any{
+	data := map[string]any{
 		"U": u, "Own": own, "Stats": s.st.UserStats(u.ID),
 		"Work":     firstN(s.st.computerWorkBy(u.ID), 200),
 		"Cleaned":  s.st.episodesCleanedBy(u.ID, 200),
 		"Tokens":   s.st.APITokens(u.ID),
 		"Activity": s.st.Activity(u.ID, 100),
-	})
+	}
+	if !own {
+		// rights and password of this user (admins). "Select all" / "Select none"
+		// only pre-tick the boxes of this page (nothing is saved before "Save")
+		feeds, _ := s.st.Feeds() // alphabetical
+		rights, preset := u.Podcasts, ""
+		switch r.URL.Query().Get("preset") {
+		case "all":
+			rights, preset = map[int64]bool{}, "all"
+			for _, f := range feeds {
+				rights[f.ID] = true
+			}
+		case "none":
+			rights, preset = map[int64]bool{}, "none"
+		}
+		all := len(feeds) > 0
+		for _, f := range feeds {
+			if !rights[f.ID] {
+				all = false
+			}
+		}
+		data["Feeds"], data["Rights"], data["AllRights"], data["Preset"] = feeds, rights, all, preset
+	}
+	s.render(w, r, "user", title, nav, data)
 }
 
 // handleActivity: everybody's recent actions (admins).
