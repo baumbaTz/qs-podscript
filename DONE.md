@@ -1,5 +1,12 @@
 # DONE
 
+## 2026-10-05 – v0.35.2 – fix: upload/transcription failed with "UNIQUE constraint failed: tokens.version_id, tokens.seg_idx, tokens.idx"
+- trimLoops (chunks.go) gave the "[...]" marker for a cut-out repetition loop
+  token index 0, which collides with the real first token of the same
+  segment (also two markers in one segment). Storing the result then failed,
+  locally and on the server. The tokens of every segment are now numbered
+  again, in order, after trimming. Regression test in pieces_test.go.
+
 ## 2026-10-04 – v0.35.1 – podcast list always alphabetical
 - Store.Feeds() (store.go) now sorts podcasts by title, case-insensitive,
   instead of by id / time added. Because every list goes through it, this

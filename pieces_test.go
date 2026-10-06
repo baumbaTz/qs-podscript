@@ -223,3 +223,25 @@ func TestRepetitionSuspicious(t *testing.T) {
 		}
 	}
 }
+
+// the [...] marker used to get idx 0, colliding with the first token of its
+// segment (UNIQUE constraint failed: tokens.version_id, seg_idx, idx)
+func TestTrimLoopsUniqueTokenIdx(t *testing.T) {
+	loop := "ie Lannister. I don't care that you did your brother anyway." + strings.Repeat(" I don't care about that.", 14) + " So anyway."
+	segs := []Segment{{Idx: 0, StartMs: 0, EndMs: 30000, Text: loop}, {Idx: 1, StartMs: 30000, EndMs: 31000, Text: "next one"}}
+	toks := words(loop, 0, 300)
+	toks = append(toks, Token{SegIdx: 1, Idx: 0, StartMs: 30000, EndMs: 30500, Text: " next", P: .9},
+		Token{SegIdx: 1, Idx: 1, StartMs: 30500, EndMs: 31000, Text: " one", P: .9})
+	_, tk, n := trimLoops(segs, toks)
+	if n != 1 {
+		t.Fatalf("loops trimmed: %d", n)
+	}
+	seen := map[[2]int]bool{}
+	for _, x := range tk {
+		k := [2]int{x.SegIdx, x.Idx}
+		if seen[k] {
+			t.Fatalf("duplicate token (seg_idx=%d, idx=%d) %q", x.SegIdx, x.Idx, x.Text)
+		}
+		seen[k] = true
+	}
+}

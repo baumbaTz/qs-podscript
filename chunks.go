@@ -470,8 +470,14 @@ func trimLoops(segs []Segment, toks []Token) ([]Segment, []Token, int) {
 		re[segsOut[k].Idx] = k
 		segsOut[k].Idx = k
 	}
+	// the [...] markers have no index of their own and dropped tokens leave
+	// gaps: number the tokens of every segment again, in order
+	// ((version, seg_idx, idx) must be unique when stored)
+	next := map[int]int{}
 	for k := range out {
 		out[k].SegIdx = re[out[k].SegIdx]
+		out[k].Idx = next[out[k].SegIdx]
+		next[out[k].SegIdx]++
 	}
 	return segsOut, out, n
 }
