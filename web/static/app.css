@@ -245,6 +245,29 @@ table { width: 100%; border-collapse: collapse; }
 .ep-err { color: var(--err); font-size: .8rem; margin-top: .2rem; overflow-wrap: anywhere; }
 .settings summary, .versions summary { cursor: pointer; font-weight: 600; }
 .settings .form { margin-top: 1rem; }
+/* podcast settings: one panel with tabs, no JavaScript. The tab shown is the
+   #target (so the redirects to #feeds, #people, #spelling, #remove open the right one) */
+.sp-nav { display: flex; flex-wrap: wrap; align-items: center; gap: .25rem 1.1rem; }
+.sp-title { font-weight: 600; margin-right: .6rem; }
+.sp-nav a { color: var(--ink-soft); text-decoration: none; padding: .2rem 0; border-bottom: 2px solid transparent; }
+.sp-nav a:hover { color: var(--ink); }
+.sp-nav .sp-close { display: none; margin-left: auto; font-size: .85rem; }
+.sp-pane { display: none; margin-top: .9rem; padding-top: .9rem; border-top: 1px solid var(--rule); }
+.sp-pane:target, .sp-pane:has(:target) { display: block; }
+.settings-panel:not(:has(.sp-pane:target, #remove:target)) .sp-pane.dflt { display: block; }
+.settings-panel:has(.sp-pane:target, #remove:target) .sp-close { display: inline; }
+.settings-panel:has(#general:target, #remove:target) .sp-nav a[href="#general"],
+.settings-panel:has(#feeds:target) .sp-nav a[href="#feeds"],
+.settings-panel:has(#people:target) .sp-nav a[href="#people"],
+.settings-panel:has(#spelling:target) .sp-nav a[href="#spelling"],
+.settings-panel:not(:has(.sp-pane:target, #remove:target)) .sp-nav a.dflt { color: var(--ink); font-weight: 600; border-bottom-color: var(--link); }
+/* search box in the header (phones keep the plain "Search" link) */
+.top nav .navsearch { margin: 0; display: flex; align-items: center; }
+.top nav .navsearch input[type=search] { width: 6.5rem; padding: .1rem .55rem; font-size: .9rem; border-radius: var(--r-sm); transition: width .15s ease; }
+.top nav .navsearch input[type=search]:focus { width: 15rem; }
+@media (prefers-reduced-motion: reduce) { .top nav .navsearch input[type=search] { transition: none; } }
+@media (min-width: 761px) { .top nav .nav-search-link { display: none; } }
+@media (max-width: 760px) { .top nav .navsearch { display: none; } }
 .versions table { margin-top: .75rem; font-size: .85rem; }
 .versions td { padding: .4rem .5rem; border-top: 1px solid var(--rule); }
 .versions tr.viewing td { background: color-mix(in srgb, var(--meter) 10%, transparent); }
@@ -906,7 +929,7 @@ details.inline-details[open] { display: block; margin-top: .4rem; }
 /* panels, inputs, tabs */
 :root[data-look="quicksack"] .panel, :root[data-look="quicksack"] details.panel { background: var(--panel); border-color: var(--qs-line); }
 :root[data-look="quicksack"] input, :root[data-look="quicksack"] select, :root[data-look="quicksack"] textarea { background: var(--qs-field); color: var(--ink); border: 1px solid var(--qs-field-line); border-radius: var(--r-sm); }
-:root[data-look="quicksack"] .search-row input[type=search] { background: var(--qs-search); border-color: var(--qs-search-line); }
+:root[data-look="quicksack"] .search-row input[type=search], :root[data-look="quicksack"] .navsearch input[type=search] { background: var(--qs-search); border-color: var(--qs-search-line); }
 :root[data-look="quicksack"] .tabs a { font: 500 .95rem var(--display); text-transform: uppercase; letter-spacing: .05em; }
 :root[data-look="quicksack"] .tabs a[aria-current] { background: var(--panel); border-color: var(--qs-pop-line); color: var(--qs-strong); box-shadow: inset 0 2px 0 var(--accent); }
 :root[data-look="quicksack"] .jump a { font: 500 .8rem var(--display); text-transform: uppercase; letter-spacing: .05em; border-color: var(--qs-jump-line); }

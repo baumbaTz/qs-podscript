@@ -1,5 +1,17 @@
 # DONE
 
+## 2026-10-06 – v0.36.0 – podcast page: one "Podcast settings" panel with tabs; search box in the header
+- Podcast page (feed.html): the four collapsible blocks (Podcast settings, Feeds,
+  People on this podcast, Spelling fixes) are now one panel "Podcast settings" with
+  a small tab row: General, Feeds, People, Spelling fixes. No JavaScript: the tab
+  shown is the URL #target, so the existing redirects (#feeds, #people, #spelling,
+  #remove) open the right tab. Only the tabs a user may use are shown (General and
+  Feeds: admins; People and Spelling fixes: everyone who can edit the podcast).
+  People opens by itself while the podcast has nobody on it (as before).
+- Header (layout.html): a search box on every page (desktop), submits to /search;
+  it grows when focused, Alt+Shift+S focuses it (accesskey). On the search page the
+  header shows the plain "Search" item, on phones the plain "Search" link.
+
 ## 2026-10-05 – v0.35.2 – fix: upload/transcription failed with "UNIQUE constraint failed: tokens.version_id, tokens.seg_idx, tokens.idx"
 - trimLoops (chunks.go) gave the "[...]" marker for a cut-out repetition loop
   token index 0, which collides with the real first token of the same

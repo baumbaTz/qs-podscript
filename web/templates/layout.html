@@ -37,7 +37,11 @@
   <div class="top-tools"><button type="button" class="theme-mini" id="themebtn2" hidden></button></div>
   <nav>
     <a href="{{.ContentBase}}/" {{if eq .Nav "home"}}aria-current="page"{{end}}>Podcasts</a>
-    <a href="{{.ContentBase}}/search" {{if eq .Nav "search"}}aria-current="page"{{end}}>Search</a>
+    {{if eq .Nav "search"}}<a href="{{.ContentBase}}/search" aria-current="page">Search</a>
+    {{else}}<a class="nav-search-link" href="{{.ContentBase}}/search">Search</a>
+    <form class="navsearch" method="get" action="{{.ContentBase}}/search" role="search">
+      <input type="search" name="q" placeholder="Search" aria-label="Search the transcripts" accesskey="s" title="Search the transcripts (Alt+Shift+S)">
+    </form>{{end}}
     {{if .ViaLocal}}<a href="{{.LocalBase}}/setup" title="The settings of your own computer">Setup</a>
     <a href="{{.LocalBase}}/queue" title="What your computer works on">Queue</a>
     {{else if .IsAdmin}}<a href="/setup" {{if eq .Nav "setup"}}aria-current="page"{{end}}>Setup{{if not .Setup.Ready}}{{if not .ServerMode}} <span class="dot" title="Setup needed"></span>{{end}}{{end}}</a>
