@@ -1,0 +1,16 @@
+{{define "content"}}
+<section class="login">
+{{if .Data.Gone}}
+  <h1>Invite link not open</h1>
+  <p class="sub narrow">This link has already been used, was revoked, or has expired. Ask an admin for a new one.</p>
+{{else}}
+  <h1>Join QS-PodScript</h1>
+  <p class="sub narrow">You've been invited to help on {{if .Data.Podcasts}}{{range $i, $n := .Data.Podcasts}}{{if $i}}, {{end}}{{$n}}{{end}}{{else}}this server{{end}}. Pick a username and password – this link only works once.</p>
+  <form method="post" action="/join/{{.Data.Token}}" class="form">
+    <label>Name <input name="name" value="{{.Data.Name}}" required autocomplete="username" autofocus></label>
+    <label>Password <input type="password" name="password" required minlength="10" autocomplete="new-password"><small>At least 10 characters.</small></label>
+    <button type="submit">Create my account</button>
+  </form>
+{{end}}
+</section>
+{{end}}

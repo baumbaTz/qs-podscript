@@ -104,7 +104,7 @@ func (s *Server) handleRobots(w http.ResponseWriter, r *http.Request) {
 	}
 	fmt.Fprint(w, "User-agent: *\n")
 	for _, p := range []string{"/audio/", "/api/", "/events", "/login", "/search", "/account", "/users",
-		"/setup", "/queue", "/log", "/work", "/people", "/activity", "/settings", "/_local/"} {
+		"/setup", "/queue", "/log", "/work", "/people", "/activity", "/settings", "/_local/", "/join/", "/invites"} {
 		fmt.Fprintf(w, "Disallow: %s\n", p)
 	}
 	fmt.Fprintf(w, "\nSitemap: %s/sitemap.xml\n", origin(r))

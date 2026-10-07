@@ -12,6 +12,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"html/template"
 	"net"
 	"net/http"
 	"net/url"
@@ -620,7 +621,38 @@ func (s *Server) handleUsers(w http.ResponseWriter, r *http.Request) {
 	for _, u := range users {
 		stats[u.ID] = s.st.UserStats(u.ID)
 	}
-	s.render(w, r, "users", "Users", "users", map[string]any{"Users": users, "Stats": stats})
+	feeds, _ := s.st.Feeds() // already alphabetical
+	names := func(rights map[int64]bool) []string {
+		var out []string
+		for _, f := range feeds {
+			if rights[f.ID] {
+				out = append(out, f.Title)
+			}
+		}
+		return out
+	}
+	data := map[string]any{"Users": users, "Stats": stats, "Feeds": feeds}
+	invites, _ := s.st.Invites()
+	type invRow struct {
+		Invite
+		Names []string
+	}
+	rows := make([]invRow, len(invites))
+	for i, iv := range invites {
+		rows[i] = invRow{iv, names(iv.Podcasts)}
+	}
+	data["OpenInvites"] = rows
+	if tok := r.URL.Query().Get("invited"); tok != "" {
+		if iv, err := s.st.inviteByToken(tok); err == nil {
+			data["Invited"] = struct {
+				Expires time.Time
+				QR      template.HTML
+				Link    string
+				Names   []string
+			}{iv.Expires, inviteQR(origin(r) + "/join/" + tok), origin(r) + "/join/" + tok, names(iv.Podcasts)}
+		}
+	}
+	s.render(w, r, "users", "Users", "users", data)
 }
 
 func (s *Server) handleUserAdd(w http.ResponseWriter, r *http.Request) {

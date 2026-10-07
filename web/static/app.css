@@ -213,6 +213,15 @@ button.quiet:not(:disabled):hover, .button.quiet:hover { border-color: var(--ink
 .row-buttons { display: flex; flex-wrap: wrap; gap: .5rem; }
 #gpu-speakers { margin-bottom: 1.5rem; }
 .form fieldset { border: 0; padding: 0; margin: 0; display: grid; gap: .35rem; }
+/* invite links: the just-created link + QR, the open-invites list */
+.invite-grid { display: flex; flex-wrap: wrap; gap: 1.25rem; align-items: flex-start; margin-top: .75rem; }
+.invite-grid .qr { width: 10rem; flex: none; }
+.invite-grid .qr svg { width: 100%; height: auto; border-radius: var(--r-sm); }
+.invite-link { background: var(--panel-soft, var(--panel)); border: 1px solid var(--rule); border-radius: var(--r-sm); padding: .5rem .7rem; overflow-wrap: anywhere; }
+.invite-list { list-style: none; margin: 0; padding: 0; display: grid; gap: .5rem; }
+.invite-list li { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .5rem .9rem; border-top: 1px solid var(--rule); padding-top: .5rem; }
+.invite-list li:first-child { border-top: 0; padding-top: 0; }
+.invite-list form { margin: 0; }
 .form legend { font-weight: 600; font-size: .9rem; margin-bottom: .35rem; }
 .form label.radio { display: flex; gap: .5rem; font-weight: 400; align-items: baseline; }
 form.inline { display: inline; }

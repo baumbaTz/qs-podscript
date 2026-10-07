@@ -1,5 +1,44 @@
 # DONE
 
+## 2026-10-07 – v0.38.0 – invite links with a QR code, for adding helpers without setting their password yourself
+- New file invite.go: invites table + invite_podcasts table (schema v20), NewInvite /
+  Invites / inviteByToken / RevokeInvite / AcceptInvite on Store, and the routes:
+  POST /invites (admin, creates one), POST /invites/{id}/revoke (admin),
+  GET+POST /join/{token} (public, no login – the person has no account yet).
+- The admin fixes which podcasts the invite grants *when creating it*; the QR
+  code and link only ever carry the token, never the rights themselves. The
+  person who opens the link only picks a username and a password – they're
+  always created as an editor, never admin, with exactly those podcasts.
+  Invites are single-use (consumed in the same DB transaction as account
+  creation, so two people can't race one link) and expire after 7 days.
+- QR code: added github.com/skip2/go-qrcode (pure Go, no cgo) purely as the
+  encoder; invite.go reads its module Bitmap() and renders that as inline
+  SVG itself (no JS, no external image request, matches the rest of the
+  server-rendered SVG in the app).
+- users.html: "Invite a helper" panel (tick the podcasts, Create invite);
+  right after creating one, the link + QR + "can edit: …" are shown once;
+  an "Open invites" list (who made it, when it expires, which podcasts) with
+  a Revoke button per invite. The old "Add a user" form (set the password
+  yourself) is kept, now titled "Add a user directly".
+- New web/templates/join.html: shows which podcasts the invite is for, a
+  name + password form, or "Invite link not open" for a used/expired/
+  revoked/garbage token (same message for all four, so a stale link can't
+  be used to probe whether it was ever valid).
+- robots.txt: /join/ and /invites disallowed, same as the other account
+  pages.
+- Tests (invite_test.go): store-level (create/list/wrong-token/accept-as-
+  editor-with-exactly-those-podcasts/single-use), expiry + revoke (an
+  expired invite drops out of the open list and can't be accepted; a
+  revoked one can't either), a real end-to-end HTTP test through the actual
+  routes and templates (login, create invite, see it on /users with the QR
+  svg and podcast name, open /join as a second client, reject a short
+  password, accept, confirm the account's role+podcasts, confirm a reused
+  link shows "not open"), and a QR-correctness test that compares the
+  rendered SVG's dark squares pixel-for-pixel against go-qrcode's own
+  Bitmap() for the same link (full QR decoding wasn't worth reimplementing
+  in a test just to risk a second, independent bug there).
+
+
 ## 2026-10-06 – v0.37.0 – users: tiles, one page per user with rights and password
 - Users page (users.html): every user is a tile (name, admin/editor tag, transcribed /
   cleaned up / last active) that opens the user's page. Sorted alphabetically (not

@@ -2,6 +2,21 @@
 <h1>Users</h1>
 <p class="actions"><a class="button quiet" href="/users/activity">Who did what</a> <a class="button quiet" href="/work">Helpers' work</a></p>
 <p class="sub narrow">Editors can fix speakers, text, ad/clip marks, people of a podcast and spelling fixes – only for the podcasts ticked here. Admins can do everything, including users, podcasts and transcribing. Reading is open to everybody without login.</p>
+
+{{with .Data.Invited}}
+<section class="panel invite-new">
+  <h2 class="section-title">Invite link created</h2>
+  <p class="sub narrow">Send this link to the helper, or let them scan the code. It opens once: they pick their own name and password, and get exactly the podcasts below. It stops working after that, or on {{date .Expires.Unix}} if nobody uses it.</p>
+  <div class="invite-grid">
+    <div class="qr">{{.QR}}</div>
+    <div>
+      <p class="invite-link"><code>{{.Link}}</code></p>
+      <p class="sub">Can edit: {{if .Names}}{{range $i, $n := .Names}}{{if $i}}, {{end}}{{$n}}{{end}}{{else}}<em>nothing yet – an admin can add podcasts afterwards</em>{{end}}</p>
+    </div>
+  </div>
+</section>
+{{end}}
+
 <ul class="user-tiles">
 {{range .Data.Users}}
   <li><a class="panel user-tile" id="u{{.ID}}" href="/users/{{.ID}}">
@@ -14,8 +29,37 @@
 {{end}}
 </ul>
 
+{{with .Data.OpenInvites}}
 <section class="panel">
-  <h2 class="section-title">Add a user</h2>
+  <h2 class="section-title">Open invites</h2>
+  <ul class="invite-list">
+  {{range .}}
+    <li>
+      <span>Created by {{.CreatedBy}} {{ago .CreatedAt.Unix}} · expires {{date .Expires.Unix}} · {{if .Names}}{{range $i, $n := .Names}}{{if $i}}, {{end}}{{$n}}{{end}}{{else}}<em>no podcasts yet</em>{{end}}</span>
+      <form method="post" action="/invites/{{.ID}}/revoke">
+        <button type="submit" class="quiet small">Revoke</button>
+      </form>
+    </li>
+  {{end}}
+  </ul>
+</section>
+{{end}}
+
+<section class="panel">
+  <h2 class="section-title">Invite a helper</h2>
+  <p class="sub narrow">Creates a one-time link (and a QR code of it) for someone to set up their own account. You fix which podcasts they may edit now; they can't change that themselves.</p>
+  <form method="post" action="/invites" class="form">
+    <fieldset>
+      <legend>May edit these podcasts</legend>
+      {{range .Data.Feeds}}<label class="radio"><input type="checkbox" name="podcast" value="{{.ID}}"> {{.Title}}</label>{{else}}<small>No podcasts yet.</small>{{end}}
+    </fieldset>
+    <button type="submit">Create invite</button>
+  </form>
+</section>
+
+<section class="panel">
+  <h2 class="section-title">Add a user directly</h2>
+  <p class="sub narrow">For when you'd rather set the password yourself than send an invite link.</p>
   <form method="post" action="/users" class="form">
     <label>Name <input name="name" required autocomplete="off"></label>
     <label>Password <input type="password" name="password" required minlength="10" autocomplete="new-password"><small>At least 10 characters. Tell it to the person; they can't change it themselves yet.</small></label>

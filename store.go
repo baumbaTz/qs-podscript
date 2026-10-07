@@ -18,7 +18,7 @@ import (
 // The readable transcript is built at display time (see merge.go). That makes
 // relabeling speakers instant and lets us re-run only diarization later.
 
-const schemaVersion = 19
+const schemaVersion = 20
 
 var schema = []string{
 	`CREATE TABLE settings(
@@ -339,6 +339,14 @@ func (s *Store) migrate() error {
 			`ALTER TABLE versions ADD COLUMN speakers_by INTEGER NOT NULL DEFAULT 0`,
 			`ALTER TABLE versions ADD COLUMN speakers_on TEXT NOT NULL DEFAULT ''`,
 		} {
+			if _, err := tx.Exec(q); err != nil {
+				return fmt.Errorf("%w\n%s", err, q)
+			}
+		}
+	}
+	if v < 20 {
+		// invite links: add a helper without making up a password for them
+		for _, q := range inviteSchema {
 			if _, err := tx.Exec(q); err != nil {
 				return fmt.Errorf("%w\n%s", err, q)
 			}
