@@ -1,5 +1,17 @@
 # DONE
 
+## 2026-10-08 – CI workflow (no new version, nothing to tag)
+- ci.yml: the "windows-cross" job took 19+ minutes (Linux and macOS: about 30 seconds). A cold
+  cross-build alone is about 2 minutes, so something in that job was stuck or very slow.
+  Changes: every job has a timeout (a hang now fails after 15–20 minutes instead of running
+  for hours; macOS waiting for a free runner doesn't count); apt retries and times out
+  (the likeliest place to stall) and installs without recommended extras and without
+  patchelf, which this job doesn't use; the Windows job has its own build cache (before, it
+  shared the Linux job's key and the Linux job saved first, so the SQLite-for-Windows compile
+  was never cached); checkout v5 and setup-go v6 (they run on Node 24, which is what the
+  "Node.js 20 is deprecated" warnings are about). release.yml still has the old action
+  versions – same warning there, harmless for now.
+
 ## 2026-10-08 – v0.39.0 – click / double-click on words, split marks between words, "Get started" page, manual up to date
 - Episode page (app.js): a **click** (or tap) on a word opens its menu (who said it,
   correct it, play from here, ad/clip mark); a **double-click** only plays from

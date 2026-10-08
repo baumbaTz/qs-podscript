@@ -13,9 +13,10 @@ permissions:
 jobs:
   linux:
     runs-on: ubuntu-22.04
+    timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-go@v6
         with:
           go-version-file: go.mod
       - name: Vet
@@ -29,13 +30,22 @@ jobs:
 
   windows-cross:
     runs-on: ubuntu-22.04
+    timeout-minutes: 20   # a stuck download or apt must fail, not run for hours
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-go@v6
         with:
           go-version-file: go.mod
+          # its own cache: under the Linux job's key (same go.sum) that job saves
+          # first, so the Windows objects (SQLite compiled with MinGW, the slow
+          # part) were never cached
+          cache-dependency-path: |
+            go.sum
+            .github/workflows/ci.yml
       - name: MinGW
-        run: sudo apt-get update && sudo apt-get install -y gcc-mingw-w64-x86-64 g++-mingw-w64-x86-64 patchelf
+        run: |
+          sudo apt-get -o Acquire::Retries=3 -o Acquire::http::Timeout=20 update
+          sudo apt-get -o Acquire::Retries=3 -o Acquire::http::Timeout=20 install -y --no-install-recommends gcc-mingw-w64-x86-64 g++-mingw-w64-x86-64
       - name: Build qs-podscript.exe
         env:
           CGO_ENABLED: "1"
@@ -47,9 +57,10 @@ jobs:
 
   macos:
     runs-on: macos-14   # Apple Silicon
+    timeout-minutes: 20   # counts running time, not the wait for a free runner
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-go@v6
         with:
           go-version-file: go.mod
       - name: Test
