@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-22.04
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - uses: actions/setup-go@v6
         with:
           go-version-file: go.mod
@@ -32,7 +32,7 @@ jobs:
     runs-on: ubuntu-22.04
     timeout-minutes: 20   # a stuck download or apt must fail, not run for hours
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - uses: actions/setup-go@v6
         with:
           go-version-file: go.mod
@@ -59,7 +59,7 @@ jobs:
     runs-on: macos-14   # Apple Silicon
     timeout-minutes: 20   # counts running time, not the wait for a free runner
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - uses: actions/setup-go@v6
         with:
           go-version-file: go.mod
