@@ -1,5 +1,37 @@
 # DONE
 
+## 2026-10-08 – v0.39.0 – click / double-click on words, split marks between words, "Get started" page, manual up to date
+- Episode page (app.js): a **click** (or tap) on a word opens its menu (who said it,
+  correct it, play from here, ad/clip mark); a **double-click** only plays from
+  there (starts at the full second before the word) and never shows the menu. A click
+  waits 250 ms to tell the two apart. On a touch screen a long press selects the
+  word, which opens the same menu as before. Words that are selected keep their own
+  menu; speaker names and times behave as before.
+- Speaker check (Look Who's Talking / line by line, voice.html + quiz.html): the line is
+  split at a thin **bar between two words** instead of by clicking the first word of
+  the new speaker. Mouse: the bars are faint while the pointer is over the line and
+  clear when over the gap; touch screens have no hover, so the bars are always shown
+  and have a bigger target. They add no width (no jumping text). After a split both
+  parts get fresh bars. Clicking a word no longer splits.
+- New page **/start** ("Get started", public; new users land there after joining
+  with an invite link): browser-only helping vs. lending the computer, and four steps
+  (download, install, connect to this server with its address and the user's name,
+  start). The download buttons (Windows / Linux / macOS) point straight to the files
+  of the newest release: release.go asks the GitHub API (cached 6 h, retried after
+  10 min on errors, only real app releases – not drafts, prereleases or the
+  deps-whisper-vulkan release); if GitHub can't be reached the links are built from
+  this server's own version. Kept out of search engines (robots.txt).
+- Manual (help.html): the new gestures and split bars; Podcast settings are now tabs;
+  search box in the top bar; Setup/Queue in the place menu while on a server; invite
+  links, user pages and the Get-started page; new section "Putting the data on
+  another drive" (symlink on Linux / server, junction on Windows, Proxmox mount point
+  or resize).
+- Tests: release_test.go (which release is picked, cache, failed refresh, fallback
+  links); invite_test.go now also opens the users, user, podcast, help, start, account,
+  search and activity pages through the real handlers as admin and as editor and
+  requires them to come out whole (a template error used to leave a 200 with a cut-off
+  page that substring checks didn't notice), and checks the settings tabs per role.
+
 ## 2026-10-07 – v0.38.0 – invite links with a QR code, for adding helpers without setting their password yourself
 - New file invite.go: invites table + invite_podcasts table (schema v20), NewInvite /
   Invites / inviteByToken / RevokeInvite / AcceptInvite on Store, and the routes:

@@ -222,6 +222,13 @@ button.quiet:not(:disabled):hover, .button.quiet:hover { border-color: var(--ink
 .invite-list li { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .5rem .9rem; border-top: 1px solid var(--rule); padding-top: .5rem; }
 .invite-list li:first-child { border-top: 0; padding-top: 0; }
 .invite-list form { margin: 0; }
+/* "Get started": one card per download */
+.dl-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); gap: 1rem; margin: .5rem 0; }
+.dl-card { display: flex; flex-direction: column; gap: .3rem; margin: 0; color: var(--ink); text-decoration: none; }
+.dl-card:hover, .dl-card:focus-visible { border-color: var(--link); }
+.dl-os { font-weight: 700; font-size: 1.2rem; }
+.dl-detail { color: var(--ink-soft); font-size: .9rem; }
+.dl-file { color: var(--ink-soft); font-size: .8rem; overflow-wrap: anywhere; }
 .form legend { font-weight: 600; font-size: .9rem; margin-bottom: .35rem; }
 .form label.radio { display: flex; gap: .5rem; font-weight: 400; align-items: baseline; }
 form.inline { display: inline; }
@@ -612,6 +619,20 @@ body:has(#hl-unchecked:checked) .u.part-checked:not(.mark-ad):not(.mark-clip) { 
 .qrow .text span[data-s]:hover { background: color-mix(in srgb, var(--link) 16%, transparent); }
 .qrow .text span[data-s]:first-child:hover { background: none; cursor: default; }
 .qrow.split-new { border-style: dashed; }
+/* split marks between the words of a line (speaker check): a thin bar where a
+   click splits the line. It adds no width (the box overlaps the words, so the
+   text doesn't shift when it appears). Mouse: faint while the pointer is over
+   the line, clear over the gap itself. Touch has no hover: always visible,
+   with a bigger target. */
+.qrow .text .gap { display: inline-block; position: relative; z-index: 1; width: 1em; height: 1.15em; margin: 0 -.375em 0 -.625em; vertical-align: middle; text-align: center; cursor: pointer; opacity: 0; user-select: none; -webkit-user-select: none; transition: opacity .1s; }
+.qrow .text .gap::before { content: ""; display: inline-block; width: 2px; height: 100%; background: var(--link); border-radius: 1px; }
+.qrow:hover .text .gap { opacity: .2; }
+.qrow .text .gap:hover { opacity: 1; }
+@media (hover: none), (pointer: coarse) {
+  .qrow .text .gap { opacity: .55; width: 1.5em; margin: 0 -.625em 0 -.875em; }
+  .qrow:hover .text .gap, .qrow .text .gap:hover { opacity: .55; }
+}
+@media (prefers-reduced-motion: reduce) { .qrow .text .gap { transition: none; } }
 
 /* speaker buttons in the correction menu (same look as in "Who's talking?") */
 .assign-chips { margin: 0 0 .6rem; gap: .3rem; }

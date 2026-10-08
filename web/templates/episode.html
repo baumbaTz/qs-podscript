@@ -149,7 +149,7 @@
   {{end}}{{end}}
 
   {{if $.CanEdit $e.FeedID}}
-  <p class="hint">Double-click a word to play from there or correct it; select several words, click a speaker name to fix who is speaking; a name in the lanes above renames that whole voice or checks it line by line. Keys: ← → jump 1 second (with Shift 5 seconds), Space plays and pauses. <a href="/help#speakers">More in the manual</a>.</p>
+  <p class="hint">Click a word for its menu (who said it, correct it, play from there); double-click it to just play from there; select several words, click a speaker name to fix who is speaking; a name in the lanes above renames that whole voice or checks it line by line. Keys: ← → jump 1 second (with Shift 5 seconds), Space plays and pauses. <a href="/help#speakers">More in the manual</a>.</p>
   {{else}}
   <p class="hint">Click a time to play from there. Keys: ← → jump 1 second (with Shift 5 seconds), Space plays and pauses.{{if $.ServerMode}}{{if not $.User}} <a href="/login">Log in</a> to fix speakers or text.{{end}}{{end}}</p>
   {{end}}

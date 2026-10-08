@@ -487,6 +487,7 @@ func (s *Server) routes() http.Handler {
 		mux.HandleFunc("GET /users/activity", s.guard(accessAdmin, s.handleActivity))
 		mux.HandleFunc("POST /invites", s.guard(accessAdmin, s.handleInviteCreate))
 		mux.HandleFunc("POST /invites/{id}/revoke", s.guard(accessAdmin, s.handleInviteRevoke))
+		mux.HandleFunc("GET /start", s.handleStart)
 		mux.HandleFunc("GET /join/{token}", s.handleJoinPage)
 		mux.HandleFunc("POST /join/{token}", s.handleJoin)
 		mux.HandleFunc("GET /account", s.guard(accessUser, s.handleAccount))

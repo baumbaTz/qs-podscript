@@ -34,7 +34,7 @@
   <audio id="quiz-audio" controls preload="metadata" src="{{$d.Audio}}" data-from="0" data-to="99999999"></audio>
 </div>
 <p class="sub narrow">Click a time to hear that line, or <i>Play with context</i> for the lines around it (shown greyed). The selected name is who QS-PodScript thinks is speaking – pick the right one where it's wrong. Saving marks all lines on this page as checked.</p>
-<p class="sub narrow" id="quiz-split-hint" hidden>Someone else takes over in the middle of a line? Click the first word they say – the line is split there.</p>
+<p class="sub narrow" id="quiz-split-hint" hidden>Someone else takes over in the middle of a line? Click the thin bar between the words, in front of the first word they say – the line is split there.</p>
 
 <form method="post" action="/versions/{{$vid}}/check" class="quiz" data-row-stop="1">
   <input type="hidden" name="mode" value="voice">

@@ -338,22 +338,45 @@
       closeMenu();
     });
 
-    // double-click a word -> menu for that word: play from here, who said
-    // it, correct it
+    // click (or tap) a word -> menu for that word: play from here, who said
+    // it, correct it. Double-click -> just play from there, no menu. So a
+    // click waits a moment to see whether a second one follows. (On a touch
+    // screen a long press selects the word, which opens the same menu.)
+    let clickTimer = 0;
+    const playFromWord = (w) => {
+      const au = $("audio");
+      if (!au) return;
+      // start at the full second before the word, so it isn't missed
+      au.currentTime = Math.floor(Number(w.dataset.s) / 1000);
+      au.play();
+    };
+    transcript.addEventListener("click", (e) => {
+      const w = e.target.closest("span[data-s]");
+      if (!w || e.target.closest(".who, .ts")) return;
+      clearTimeout(clickTimer);
+      if (e.detail > 1) return; // 2nd click of a double-click: "dblclick" plays
+      const sel = window.getSelection();
+      if (sel && !sel.isCollapsed) return; // selected words have their own menu
+      clickTimer = setTimeout(() => {
+        closeMenu();
+        const start = Number(w.dataset.s);
+        openMenu({
+          kind: "range", start: start, end: Math.max(Number(w.dataset.e), start + 1),
+          text: w.textContent,
+          what: "\u201c" + w.textContent + "\u201d (" + clock(start) + ") is spoken by:",
+        }, w.getBoundingClientRect());
+      }, 250);
+    });
     transcript.addEventListener("dblclick", (e) => {
       const w = e.target.closest("span[data-s]");
       if (!w || e.target.closest(".who, .ts")) return;
+      clearTimeout(clickTimer);
       // the browser selects the word on double-click; drop that selection so
-      // the selection menu doesn't open on top
+      // the selection menu doesn't open
       const sel = window.getSelection();
       if (sel) sel.removeAllRanges();
       closeMenu();
-      const start = Number(w.dataset.s);
-      openMenu({
-        kind: "range", start: start, end: Math.max(Number(w.dataset.e), start + 1),
-        text: w.textContent,
-        what: "\u201c" + w.textContent + "\u201d (" + clock(start) + ") is spoken by:",
-      }, w.getBoundingClientRect());
+      playFromWord(w);
     });
     $("a-label").addEventListener("change", (e) => {
       if ($("a-submit")) $("a-submit").hidden = false;
@@ -553,12 +576,27 @@
       const ts = r.querySelector(".ts");
       ts.dataset.seek = a; ts.textContent = short(a - ws);
     };
-    // a click on a word (not the first) splits the line there: the speaker
-    // changes in the middle of a sentence
+    // the split marks: a thin bar between two words, where a click splits the
+    // line (the speaker changes in the middle of a sentence). Shown when the
+    // mouse is over the gap, always on a touch screen - see the CSS
+    const addGaps = (row) => {
+      const text = row.querySelector(".text");
+      if (!text) return;
+      text.querySelectorAll(".gap").forEach((g) => g.remove());
+      Array.from(text.querySelectorAll("span[data-s]")).slice(1).forEach((w) => {
+        const g = document.createElement("span");
+        g.className = "gap";
+        g.setAttribute("role", "button");
+        g.title = "Split the line here - someone else starts speaking";
+        w.before(g);
+      });
+    };
+    // split the line before word w
     const split = (r, w) => {
       const ws_ = Array.from(r.querySelectorAll(".text span[data-s]"));
       const k = ws_.indexOf(w);
       if (k <= 0) return;
+      r.querySelectorAll(".text .gap").forEach((g) => g.remove()); // not into the clone
       const radioChecked = (row) => { const c = row.querySelector("input[type=radio]:checked"); return c ? c.value : null; };
       const keep = radioChecked(r), other = r.querySelector("select").value;
       const nr = r.cloneNode(true);
@@ -576,6 +614,7 @@
       [r, nr].forEach((row) => {
         row.querySelector("select").value = other;
         row.querySelectorAll("input[type=radio]").forEach((x) => { x.checked = other === "" && x.value === keep; });
+        addGaps(row);
         bindRow(row);
       });
       nr.classList.add("split-new");
@@ -609,10 +648,11 @@
           playFrom(Math.max(from, Number(ts.dataset.seek) / 1000 - 0.3));
           return;
         }
-        const w = e.target.closest(".text span[data-s]");
-        if (w) split(r, w);
+        const g = e.target.closest(".text .gap");
+        if (g && g.nextElementSibling) split(r, g.nextElementSibling);
       });
     };
+    rows.forEach(addGaps);
     rows.forEach(bindRow);
     const hint = $("quiz-split-hint");
     if (hint) hint.hidden = false;

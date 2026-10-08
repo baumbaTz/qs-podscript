@@ -14,7 +14,7 @@
 <h2>Searching</h2>
 <p><a href="/search">Search</a> looks through everything that was said in all transcribed episodes (ads left out). All words must appear in the same passage. <b>“An exact phrase”</b> in quotes, <b>word*</b> for words starting like that; capitals and accents don't matter. Filter by podcast or by who said it. A result opens the episode at that spot with the words highlighted.</p>
 <h2>Helping</h2>
-<p>Transcripts are made automatically and then cleaned up by people: fixing who is speaking and words the speech engine got wrong. If you'd like to help, ask the people running this site for an account – then you can fix things right on these pages.</p>
+<p>Transcripts are made automatically and then cleaned up by people: fixing who is speaking and words the speech engine got wrong. If you'd like to help, ask the people running this site for an account – then you can fix things right on these pages. The <a href="/start">Get started</a> page shows how to join in.</p>
 <p class="sub">This site runs <a href="https://github.com/baumbatz/qs-podscript" rel="noopener noreferrer" target="_blank">QS-PodScript</a>, free software under the AGPL-3.0.</p>
 </article>
 {{else}}
@@ -61,7 +61,7 @@
   <li>Set the <b>language</b> (for example <code>en</code>). A fixed language is faster and more reliable than <code>auto</code>.</li>
   <li>Optional: enter the <b>hosts</b>, separated by commas. This helps QS-PodScript put names on voices later.</li>
 </ol>
-<p><b>Archive feeds:</b> some podcasts have extra feeds with older episodes. Open the podcast, then <b>Feeds</b> → <i>Add another feed</i>. All feeds of a podcast share one episode list and are transcribed oldest first. An episode that appears in two feeds is kept only once – recognised by its ID, its audio file name, or the same title on the same day. Removing a feed also removes its episodes that were never transcribed; transcribed ones stay.</p>
+<p><b>Archive feeds:</b> some podcasts have extra feeds with older episodes. Open the podcast, then <b>Podcast settings</b> → <b>Feeds</b> → <i>Add another feed</i>. All feeds of a podcast share one episode list and are transcribed oldest first. An episode that appears in two feeds is kept only once – recognised by its ID, its audio file name, or the same title on the same day. Removing a feed also removes its episodes that were never transcribed; transcribed ones stay.</p>
 </section>
 
 <section id="queue">
@@ -78,7 +78,7 @@
 <p>The podcast page lists all episodes with filters for <i>Done</i>, <i>Waiting</i> and <i>Failed</i>. Click an episode title to open its transcript.</p>
 <p><b>The queue:</b> <a href="/queue">Queue</a> in the menu lists the waiting episodes in the order they are transcribed. <b>Drag</b> an episode by its handle ⠿ to any place (hold the mouse button, move, let go) – the numbers follow and the new order is saved at once. <i>To the top</i> makes one next, <i>To the end</i> moves it behind all others, <i>Take out</i> removes it from the queue without deleting anything – it stays on its podcast page under <i>Not queued</i> (also <i>Don't transcribe</i> right in the podcast's episode list) and comes back with <i>Transcribe now</i> or <i>Put all back</i>. Taking out an episode that was queued to be transcribed again keeps its current version.</p>
 <p><b>One podcast first:</b> on a podcast's page, <i>Transcribe this podcast next</i> puts all its waiting episodes at the front of the queue – also while transcribing is already running (they follow the current episode). If nothing is running, it starts. The other podcasts follow afterwards. <i>✓ Goes first · normal order</i> undoes it.</p>
-<p><b>Removing a podcast:</b> <i>Podcast settings → Remove this podcast</i> deletes it with all episodes, transcripts, corrections and audio copies (after you tick a confirmation box). People and their voice samples stay.</p>
+<p><b>Removing a podcast:</b> <i>Podcast settings → General → Remove this podcast</i> deletes it with all episodes, transcripts, corrections and audio copies (after you tick a confirmation box). People and their voice samples stay.</p>
 </section>
 
 <section id="read">
@@ -99,7 +99,7 @@
 </dl>
 <p><b>Download text</b> saves the whole transcript as a text file with times and names.</p>
 <h3 id="search">Searching all transcripts</h3>
-<p><a href="/search">Search</a> in the menu (or the box on the Podcasts page) looks through everything that was said in all transcribed episodes – ads are left out, movie clips are marked as such. All words must appear in the same passage (about 30 words). <b>“An exact phrase”</b> in quotes, <b>word*</b> for words starting like that; capitals and accents don't matter. Filters: one podcast, one person (<i>Said by</i>, only passages that person speaks), leave out movie clips; order by best match or by date. A result opens the episode at that spot, with the found words highlighted – press play to listen from there.</p>
+<p><a href="/search">Search</a> – the box in the top bar of every page (a <i>Search</i> link on phones; <kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>S</kbd> jumps into it) – looks through everything that was said in all transcribed episodes – ads are left out, movie clips are marked as such. All words must appear in the same passage (about 30 words). <b>“An exact phrase”</b> in quotes, <b>word*</b> for words starting like that; capitals and accents don't matter. Filters: one podcast, one person (<i>Said by</i>, only passages that person speaks), leave out movie clips; order by best match or by date. A result opens the episode at that spot, with the found words highlighted – press play to listen from there.</p>
 <p><b>Connected to a server:</b> the search looks where you work right now – your own podcasts, or the server's while you have switched to it.</p>
 <p>The search shows the episodes as their page does: speaker names, text corrections and spelling fixes are included. After a change it takes a few seconds until the search finds the new text.</p>
 </section>
@@ -109,7 +109,7 @@
 <p>The player sits at the bottom of the episode page. While it plays, the current paragraph is highlighted and the current word is underlined.</p>
 <ul>
   <li>Click a <b>time</b> at the start of a paragraph to play from there.</li>
-  <li><b>Double-click a word</b> and choose <b>▶ Play from here</b> – it starts at the full second before the word, so nothing is missed.</li>
+  <li><b>Double-click a word</b> to play from there right away – it starts at the full second before the word, so nothing is missed. (A single click opens the word's menu, which has <b>▶ Play from here</b> as well.)</li>
   <li>Keys: <kbd>←</kbd> <kbd>→</kbd> jump 1 second back / forward, with <kbd>Shift</kbd> 5 seconds. <kbd>Space</kbd> plays and pauses.</li>
   <li>The menu next to the player sets the <b>speed</b> (0.4× to 3×). Your choice is remembered.</li>
   <li>The buttons floating on the right scroll the page: to the top, one page up, <b>◉</b> back to the part that is playing, one page down, to the bottom.</li>
@@ -123,14 +123,14 @@
 <p>QS-PodScript separates voices on its own, but it can't know names. You tell it a few times, and it learns: every passage you assign to a person becomes a <b>voice sample</b>, and later episodes are compared with those samples. The more samples from different episodes, the better the recognition.</p>
 
 <h3>People and podcasts</h3>
-<p>People are shared across all podcasts – a host who also appears on another show is recognized there too. On a podcast's page, under <b>People on this podcast</b>, mark who is a <b>host</b> (on almost every episode) and who is a <b>regular</b> (some episodes). People are listed in three groups – Hosts, Regulars, Not on this podcast – and a change is saved right away; the person moves to the new group. Recognition prefers these people for that podcast, but anybody known can still be recognized, and new or unknown voices are always possible.</p>
+<p>People are shared across all podcasts – a host who also appears on another show is recognized there too. On a podcast's page, in <b>Podcast settings → People</b>, mark who is a <b>host</b> (on almost every episode) and who is a <b>regular</b> (some episodes). People are listed in three groups – Hosts, Regulars, Not on this podcast – and a change is saved right away; the person moves to the new group. Recognition prefers these people for that podcast, but anybody known can still be recognized, and new or unknown voices are always possible.</p>
 
 <h3>Putting names on voices</h3>
 <ul>
   <li><b>A whole voice:</b> click the voice's name in the lanes at the top (for example "Speaker 3") and choose who it is – everything that voice said gets the name. Not sure? <i>Check line by line →</i> in that menu opens a page with <b>everything that voice said</b>, each line with the two lines before and after it for context, line by line like in <i>Look Who's Talking Now</i>: click a time to hear that line, pick the right person where it's wrong, then <i>Save</i> – all lines on the page count as checked (40 per page). If they are all the same person, <i>All of them are …</i> names every line at once (or creates a new person); for an unnamed voice that also saves a voice sample. <i>Unknown</i> and <i>[crosstalk]</i> in the lanes work the same way: their lines go to the person you pick (without a voice sample – these lines can be music or several people at once).</li>
   <li><b>One paragraph:</b> click the speaker name at the start of the paragraph.</li>
   <li><b>Exactly some words:</b> select them with the mouse (also across paragraphs) – a menu opens.</li>
-  <li><b>One word:</b> double-click it.</li>
+  <li><b>One word:</b> click it (on a touch screen: tap it, or press and hold). A double-click only plays from there.</li>
 </ul>
 <p>In the menu choose a person, <i>New person…</i>, another unnamed voice, <i>Several people at once</i> or <i>Unknown / not speech</i>. Passages of at least 2 seconds that you give to a person are saved as voice samples.</p>
 <p><b>Identify speakers</b> compares every speaker turn of the episode with all known voices. Your own corrections always win over automatic recognition. New episodes are identified automatically once people have samples.</p>
@@ -143,7 +143,7 @@
 <ol>
   <li>Press play – you hear only that passage. Click a line's time to hear that line again.</li>
   <li>Every line shows who QS-PodScript thinks is speaking (the ticked name). If that's right, leave it. If not, click the right person, <i>Several at once</i>, <i>Nobody / music</i>, or pick from <i>Someone else…</i> (all other known people, or a new voice for a guest nobody has named yet).</li>
-  <li>Someone else takes over in the middle of a line? <b>Click the first word they say</b> – the line splits there and each part gets its own speaker buttons.</li>
+  <li>Someone else takes over in the middle of a line? Move the mouse between the words: a thin bar appears. <b>Click the bar in front of the first word they say</b> – the line splits there and each part gets its own speaker buttons. (On a touch screen the bars are always shown between the words.)</li>
   <li><b>Save and next</b> stores your answers and brings the next passage. Not sure? <b>Skip</b> – someone else gets it.</li>
 </ol>
 <p>Your changes are normal corrections: they show up on the episode page with <i>Undo</i>, and naming someone saves a voice sample like everywhere else. Passages with unnamed voices and many speaker changes come first. Ads and movie clips are left out. On the episode page you see what a person has confirmed: paragraphs get a green <b>✓</b> before the speaker's name (<b>◐</b> = partly), the lanes above the transcript get a green <i>Checked</i> lane, and <i>Highlight what nobody has checked yet</i> tints every paragraph nobody has confirmed – even if the automatic result might well be right. Passages you fixed on the episode page yourself count as checked too.</p>
@@ -154,9 +154,9 @@
 <section id="text">
 <h2>6. Fixing words</h2>
 <h3>A single place</h3>
-<p>Double-click a word or select several, then type the correct text under <b>Correct the text</b> and click <i>Save text</i>. Leaving the box empty deletes those words.</p>
+<p>Click a word or select several, then type the correct text under <b>Correct the text</b> and click <i>Save text</i>. Leaving the box empty deletes those words.</p>
 <h3>Spelling fixes – everywhere at once</h3>
-<p>Some words come out differently every time – a show name, a guest's surname. On a podcast's page, open <b>Spelling fixes</b>:</p>
+<p>Some words come out differently every time – a show name, a guest's surname. On a podcast's page, open <b>Podcast settings → Spelling fixes</b>:</p>
 <ol>
   <li><b>Correct spelling:</b> how it should look, for example <code>FilmSack</code>.</li>
   <li><b>Written wrong as:</b> the wrong versions, separated by commas, for example <code>film sack, filmsack</code>.</li>
@@ -168,7 +168,7 @@
 
 <section id="marks">
 <h2>7. Ads and movie clips</h2>
-<p>Select a passage (or click a speaker name, or double-click a word) and use <b>Mark as: Ad / Movie clip / Normal</b> in the menu. The speaker stays as it is – a host reading an ad is still the host.</p>
+<p>Select a passage (or click a speaker name, or click a word) and use <b>Mark as: Ad / Movie clip / Normal</b> in the menu. The speaker stays as it is – a host reading an ad is still the host.</p>
 <ul>
   <li>Marked paragraphs are tinted and get a badge; extra lanes at the top show where ads and clips are.</li>
   <li><b>Hide ads</b> / <b>Hide movie clips</b> above the transcript hide them from view.</li>
@@ -189,7 +189,7 @@
 
 <section id="settings">
 <h2>9. Settings</h2>
-<h3>Per podcast (Podcast settings on its page)</h3>
+<h3>Per podcast (Podcast settings → General on its page)</h3>
 <ul>
   <li><b>Language</b> – the podcast's language code.</li>
   <li><b>Number of regular speakers</b> – leave at 0 to let QS-PodScript decide; that's usually better when guests or ads appear.</li>
@@ -220,6 +220,13 @@
 </ul>
 <p><b>Moving to another computer:</b> on the <a href="/setup#move">Setup</a> page, <i>Export everything</i> saves one .zip file with all podcasts, transcripts, corrections, people, voice samples and the audio copies. Install QS-PodScript on the other computer, open its Setup page, choose the file under <i>Import</i> and restart QS-PodScript. The import replaces what was there; that data is kept in a <code>before-import-…</code> folder inside the data folder. Models and tools are downloaded by the setup there. On a shared server the import also replaces the logins: create your admin again afterwards (<code>qs-podscript user add &lt;name&gt; --admin</code>) and reconnect the helpers' computers.</p>
 <p><b>Backup:</b> an export is also a good backup. Or quit QS-PodScript and copy <code>qs-podscript.db</code> and the <code>audio</code> folder. <b>Update:</b> run the installer of the newer package; your data is kept. <b>Uninstall:</b> run <code>uninstall.cmd</code> (Windows) or <code>uninstall.sh</code> (Linux) in the install folder – this removes the data too.</p>
+<h3>Putting the data on another drive</h3>
+<p>The <code>data</code> folder is the part that grows (the compact audio copies of the episodes, plus models and tools); the program itself is small. To move only that folder to a bigger drive, move it and leave a link in its old place – QS-PodScript keeps working as before, and updates from newer packages don't touch it. Quit QS-PodScript first (on a server: <code>sudo systemctl stop qs-podscript-server</code>).</p>
+<ul>
+  <li><b>Linux / server:</b> <code>mv ~/.local/share/qs-podscript/data /mnt/bigdrive/qs-podscript-data</code> and then <code>ln -s /mnt/bigdrive/qs-podscript-data ~/.local/share/qs-podscript/data</code>. Start it again and check that the site works; <code>du -sh ~/.local/share/qs-podscript/data/</code> shows how big it is. (Use the folder you installed to if you chose another one with <code>--dir</code>.)</li>
+  <li><b>Windows:</b> move <code>%LOCALAPPDATA%\qs-podscript\data</code> to the other drive (for example <code>D:\qs-podscript-data</code>), then in a command prompt: <code>mklink /J "%LOCALAPPDATA%\qs-podscript\data" "D:\qs-podscript-data"</code>. No administrator rights needed.</li>
+</ul>
+<p>Moving between two drives takes a while for large folders; <code>mv</code> only changes the name when both are on the same drive. If the move is interrupted, copy again with <code>cp -a</code> or <code>rsync -a</code> before removing the original. The uninstaller only removes the link: the moved folder stays where you put it, delete it yourself if you want it gone. For a server in a Proxmox container, add the bigger drive to the container first (<i>Resources → Add → Mount Point</i>) or make its disk larger (<code>pct resize &lt;id&gt; rootfs +50G</code>).</p>
 <p>Installer options for unattended installs: <code>-y</code> answers every question with yes, <code>-n</code> with no, <code>--defaults</code> (Windows: <code>-Defaults</code>) takes the default answers.</p>
 </section>
 
@@ -277,14 +284,19 @@
 </ul>
 <p>The speaker detection settings of the server's Setup page are sent along with every episode, so all helpers use the same model and threshold.</p>
 <h3>Helping from your own QS-PodScript</h3>
+<p>New here? The <a href="/start">Get started</a> page has the download links for the newest version and these steps in short.</p>
 <ol>
   <li><b>Add the server:</b> <a href="/setup#places">Setup → Where you work → Add a server</a>: the server address, your name and password, optionally a short name for it. The password is used once; your computer gets its own key, which an admin can revoke. You can add several servers. The installer can do this step too: it asks once whether to connect to a shared server (or takes <code>--connect</code> / <code>-Connect</code>), and <code>qs-podscript connect &lt;address&gt; --user NAME</code> does it from the command line.</li>
   <li><b>Switch to it:</b> next to the name at the top left is the <b>place menu</b> – <i>This computer</i> or a server's name. Pick a server there (or <i>Switch to it</i> in Setup, or on your Podcasts page). From then on <i>Podcasts</i>, <i>Search</i> and <i>People</i> are that server's – you read and fix its podcasts exactly like your own, every change goes straight to the server, nothing is copied. You stay there until you switch back, so you can't end up on your own podcasts by accident (old links and bookmarks lead to the server too).</li>
-  <li><b>Always this computer's:</b> <i>Setup</i>, <i>Queue</i> and <i>Activity</i> are about what your computer does, so they stay yours. Setup and Activity have a second tab <i>Server</i> for the active server (if you are an admin there). The top right always shows <b>what your computer is doing</b> (with its Start/Stop buttons); when your computer finishes work for the server episode you are looking at, the page reloads by itself.</li>
+  <li><b>Always this computer's:</b> <i>Setup</i>, <i>Queue</i> and <i>Activity</i> are about what your computer does, so they stay yours. While a server is active the menu only shows <i>Activity</i>; <i>This computer's setup</i> and <i>This computer's queue</i> are in the place menu (click the server badge next to the name). Setup and Activity have a second tab <i>Server</i> for the active server (if you are an admin there). The top right always shows <b>what your computer is doing</b> (with its Start/Stop buttons); when your computer finishes work for the server episode you are looking at, the page reloads by itself.</li>
   <li><b>Doing one episode:</b> on a server page, click <i>Transcribe again</i> or <i>Redo speaker detection</i> – your computer does exactly that episode and shows its progress at the top right. If it is busy, the episode goes on its list (<a href="/queue">Queue</a> → <i>Asked for on a server</i>) and is done right after the current work – you don't have to click again. <i>Take off</i> removes it from your list; it then stays in line for the other helpers.</li>
   <li><b>Doing a whole podcast:</b> <i>Transcribe this podcast</i> on a server's podcast page has your computer work through that podcast's waiting episodes, oldest first (also on the list in Queue until none are left). An episode that fails on your computer is left for the other helpers and your computer goes on with the next one.</li>
   <li><b>Doing many:</b> in Setup, tick <b>Transcribe for this server</b> for each server you want to help and press <i>Start transcribing</i>: your computer does your own podcasts first and then the waiting episodes of the ticked servers, taking turns between them – no matter which place is active. Nothing starts by itself. A server reserves each episode for your computer; if you stop, it is handed to someone else later. If something fails on your computer, another one tries (up to three times). Keep your computer and the servers on the same QS-PodScript version – a yellow bar says when they differ.</li>
 </ol>
+<h3>Adding helpers (admins)</h3>
+<p>On the <i>Users</i> page every user is a tile (sorted by name). Click one to open the user's page: there you set the <b>podcasts they may edit</b> (<i>Select all</i> / <i>Select none</i> only tick or untick the boxes – nothing is saved until you press <i>Save</i>, so taking one podcast away from somebody who has them all is: Select all, untick it, Save), a <b>new password</b>, make somebody an admin or remove them, and see what they did.</p>
+<p>The easiest way to add somebody is an <b>invite link</b>: on <i>Users</i> tick the podcasts they may edit and press <i>Create invite</i>. You get a link and a QR code of it (shown once). Send the link or let them scan the code: it opens a page where they choose their own name and password – you never see or set it. Afterwards they land on the <a href="/start">Get started</a> page. The link works once and for 7 days; <i>Open invites</i> lists the ones not used yet, each with <i>Revoke</i>. The QR code is only the link: which podcasts the invite gives is fixed on the server when you create it, and invited people are always editors, never admins. <i>Add a user directly</i> is still there if you'd rather choose the password yourself.</p>
+
 <h3>Your account</h3>
 <p>Click your name at the top right to change your password, see which of your computers are connected (and remove one, e.g. an old PC), and see what you transcribed and cleaned up. <b>Computer time</b> shows how long each of your computers worked on episodes (downloading, transcribing, finding speakers) and how fast: <i>4×</i> means four minutes of audio per minute of work. When a helper redoes the speakers of an episode, that time counts for the helper. Admins see this for everybody on the <i>Users</i> page, including a list of who did what.</p>
 <p><b>Your name in public:</b> every episode shows who transcribed it and who cleaned it up. By default you appear anonymously as <i>Volunteer</i> plus a number. If you like credit, open your account, enter a public name (or leave it empty to use your login name) and tick <i>Show this name publicly</i>. You can switch back any time. Admins always see login names.</p>

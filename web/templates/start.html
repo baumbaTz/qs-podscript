@@ -1,0 +1,49 @@
+{{define "content"}}
+<article class="manual start">
+<h1>Get started</h1>
+<p class="lead">{{with .User}}Welcome, {{.Name}}! {{end}}There are two ways to help with <b>{{.Data.Origin}}</b>. You can do either, or both.</p>
+
+<section class="panel">
+  <h2 class="section-title">A. In your browser – nothing to install</h2>
+  {{if .User}}<p>Open a podcast you were given access to and fix what the computer got wrong: <b>click a word</b> to correct it or say who spoke, <b>double-click a word</b> to play from there, click a speaker's name to fix a whole paragraph. The <a href="/help#speakers">manual</a> explains it step by step.</p>
+  {{else}}<p>Log in (top right) and open a podcast you were given access to. Click a word to correct it or say who spoke. No account yet? Ask the people running this site for an invite link.</p>{{end}}
+</section>
+
+<section class="panel">
+  <h2 class="section-title">B. Lend your computer – it transcribes episodes for this server</h2>
+  <p>Turning an episode into text takes a lot of computing power, so the work is done by volunteers' computers (a graphics card makes it much faster). Everything stays in your own copy of QS-PodScript; it only fetches an episode, transcribes it and sends the result back. Four steps:</p>
+
+  <h3>1. Download</h3>
+  <div class="dl-grid">
+  {{range .Data.Downloads}}
+    <a class="panel dl-card" href="{{.URL}}">
+      <span class="dl-os">{{.OS}}</span>
+      <span class="dl-detail">{{.Detail}}</span>
+      <span class="dl-file">{{.File}}{{if .MB}} · {{.MB}} MB{{end}}</span>
+    </a>
+  {{end}}
+  </div>
+  <p class="sub">{{if .Data.FromGitHub}}Newest release: <b>{{.Data.Tag}}</b>.{{else}}This server runs <b>{{.Data.Tag}}</b>.{{end}} <a href="{{.Data.NotesURL}}" rel="noopener noreferrer" target="_blank">What's in it</a> · <a href="{{.Data.Releases}}" rel="noopener noreferrer" target="_blank">All releases</a> · <a href="{{.Data.Repo}}" rel="noopener noreferrer" target="_blank">Source code on GitHub</a>{{if .Data.Differs}}<br>This server runs <b>{{.Version}}</b>. Keep your computer and the server on the same version if you can – a yellow bar shows when they differ.{{end}}</p>
+
+  <h3>2. Install</h3>
+  <ul>
+    <li><b>Windows:</b> unzip the file and double-click <code>install.cmd</code>. It downloads everything needed (about 2.5 GB, once). No administrator rights needed.</li>
+    <li><b>Linux:</b> in a terminal: <code>tar xzf qs-podscript-*-linux-x64.tar.gz</code>, then <code>cd qs-podscript-*</code> and <code>./install.sh</code>.</li>
+    <li><b>macOS:</b> install the tools once with Homebrew – <code>brew install ffmpeg whisper-cpp</code> – then double-click <code>QS-PodScript.command</code> in the unzipped folder (the README inside explains how to allow the unsigned app).</li>
+  </ul>
+  <p class="sub">The installer asks once whether to connect to a shared server – you can already do step 3 there. Answer with <code>{{.Data.Origin}}</code>, your name{{with .User}} (<b>{{.Name}}</b>){{end}} and your password.</p>
+
+  <h3>3. Connect it to this server</h3>
+  <p>Start QS-PodScript. A window opens and your browser shows it at <code>http://127.0.0.1:8321/</code> – that is <b>your</b> copy, not this site. There open <b>Setup</b> → <b>Where you work</b> → <b>Add a server</b> and enter:</p>
+  <ul>
+    <li>Server address: <code>{{.Data.Origin}}</code></li>
+    <li>Your name: {{with .User}}<b>{{.Name}}</b>{{else}}the one you chose when you joined{{end}} – and your password. The password is used once; your computer gets its own key, which an admin or you can revoke.</li>
+  </ul>
+
+  <h3>4. Start helping</h3>
+  <p>In <b>Setup</b> switch on <b>Transcribe for this server</b>, then press <b>Start transcribing</b> (top right). Your computer takes one episode at a time and keeps going until you press <b>Stop</b>. <b>Keep the QS-PodScript window open</b> while it works; nothing starts by itself.</p>
+</section>
+
+<p class="sub">Stuck? The <a href="/help">manual</a> has a chapter <i>When something goes wrong</i>; the people running this site can help too.</p>
+</article>
+{{end}}

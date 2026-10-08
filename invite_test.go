@@ -70,8 +70,8 @@ func TestInviteEndToEndHTTP(t *testing.T) {
 		b, _ := io.ReadAll(resp.Body)
 		return resp.StatusCode, string(b)
 	}
-	if code, body := mustGet(admin, "/users"); code != 200 || !strings.Contains(body, "Invite a helper") {
-		t.Fatalf("users page (no invites yet): status %d, body has form? %v", code, strings.Contains(body, "Invite a helper"))
+	if code, body := mustGet(admin, "/users"); code != 200 || !strings.Contains(body, "Invite a helper") || !complete(body) {
+		t.Fatalf("users page (no invites yet): status %d, body has form? %v, complete? %v", code, strings.Contains(body, "Invite a helper"), complete(body))
 	}
 
 	// create an invite restricted to the one podcast
@@ -100,11 +100,15 @@ func TestInviteEndToEndHTTP(t *testing.T) {
 	if !strings.Contains(body, "/join/"+tok) {
 		t.Fatal("invite link missing from the users page")
 	}
+	if !strings.Contains(body, "Open invites") || !strings.Contains(body, "Revoke") || !strings.Contains(body, "Add a user directly") || !complete(body) {
+		t.Fatalf("the rest of the users page is missing (open invites %v, revoke %v, add directly %v, complete %v)",
+			strings.Contains(body, "Open invites"), strings.Contains(body, "Revoke"), strings.Contains(body, "Add a user directly"), complete(body))
+	}
 
 	// a second, unauthenticated client follows the link
 	guest := &http.Client{Jar: mustJar(t), CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
 	code, body = mustGet(guest, "/join/"+tok)
-	if code != 200 || !strings.Contains(body, "A Show") || !strings.Contains(body, "Create my account") {
+	if code != 200 || !strings.Contains(body, "A Show") || !strings.Contains(body, "Create my account") || !complete(body) {
 		t.Fatalf("join page: status %d, has podcast+form? %v %v", code, strings.Contains(body, "A Show"), strings.Contains(body, "Create my account"))
 	}
 
@@ -125,12 +129,21 @@ func TestInviteEndToEndHTTP(t *testing.T) {
 		t.Fatal(err)
 	}
 	resp.Body.Close()
-	if resp.StatusCode != http.StatusSeeOther || resp.Header.Get("Location") != "/account" {
+	if resp.StatusCode != http.StatusSeeOther || resp.Header.Get("Location") != "/start" {
 		t.Fatalf("join submit: status %d location %q", resp.StatusCode, resp.Header.Get("Location"))
 	}
 	code, body = mustGet(guest, "/account")
 	if code != 200 || !strings.Contains(body, "volunteer") {
 		t.Fatalf("not logged in as the new user after joining: status %d", code)
+	}
+	// ... and the page they are sent to greets them and tells them how to get going
+	githubAPI, relCache.at, relCache.rel = "http://127.0.0.1:1", time.Time{}, nil // no real network in tests
+	code, body = mustGet(guest, "/start")
+	if code != 200 || !complete(body) || !strings.Contains(body, "Welcome, volunteer") || !strings.Contains(body, "<code>"+ts.URL+"</code>") ||
+		!strings.Contains(body, "/releases/download/v"+version+"/qs-podscript-"+version+"-windows-x64.zip") {
+		t.Fatalf("start page after joining: status %d, welcome %v, address %v, windows link %v", code,
+			strings.Contains(body, "Welcome, volunteer"), strings.Contains(body, ts.URL),
+			strings.Contains(body, "/releases/download/v"+version+"/qs-podscript-"+version+"-windows-x64.zip"))
 	}
 
 	// the new user really is an editor restricted to that one podcast, not
@@ -143,12 +156,21 @@ func TestInviteEndToEndHTTP(t *testing.T) {
 		t.Fatalf("new user wrong: role=%q podcasts=%+v", u.Role, u.Podcasts)
 	}
 
+	// the page is also readable without logging in
+	if code, body := mustGet(mustClient(t), "/start"); code != 200 || !complete(body) || strings.Contains(body, "Welcome,") || !strings.Contains(body, "Ask the people running this site") {
+		t.Fatalf("start page without login: status %d, complete %v", code, complete(body))
+	}
+
 	// the link is now used up: a third visitor sees "not open", not the form
 	code, body = mustGet(mustClient(t), "/join/"+tok)
 	if code != 200 || strings.Contains(body, "Create my account") || !strings.Contains(body, "not open") {
 		t.Fatalf("used invite should show the gone message: status %d, still has form? %v", code, strings.Contains(body, "Create my account"))
 	}
 }
+
+// a template that fails halfway still answers 200 with the part it got to –
+// so also check that a whole page came out
+func complete(body string) bool { return strings.HasSuffix(strings.TrimSpace(body), "</html>") }
 
 func mustJar(t *testing.T) *cookiejar.Jar {
 	t.Helper()
@@ -373,4 +395,117 @@ func parseDarkSquares(t *testing.T, svg string) map[[2]int]bool {
 		out[k] = true
 	}
 	return out
+}
+
+// TestChangedPagesRenderCompletely opens, as the real handlers serve them, the
+// pages that were reworked in the last versions, for an admin and for an
+// editor – each must come out whole (not just start and then stop at a
+// template error) and show the parts that belong to that role.
+func TestChangedPagesRenderCompletely(t *testing.T) {
+	old := P.DB
+	P.DB = t.TempDir() + "/t.db"
+	defer func() { P.DB = old }()
+	st, err := openStore()
+	if err != nil {
+		t.Fatal(err)
+	}
+	st.AddUser("admin", "longenough1", roleAdmin)
+	edID, _ := st.AddUser("ed", "longenough2", roleEditor)
+	f1, _ := st.AddFeed(Feed{URL: "https://x/a.xml", Title: "Zed Show", Language: "en"})
+	f2, _ := st.AddFeed(Feed{URL: "https://x/b.xml", Title: "Alpha Show", Language: "en"})
+	st.SetUserPodcasts(edID, []int64{f1})
+
+	srv := &Server{st: st, serverMode: true}
+	if err := srv.loadTemplates(); err != nil {
+		t.Fatal(err)
+	}
+	ts := httptest.NewServer(srv.routes())
+	defer ts.Close()
+
+	login := func(name, pw string) *http.Client {
+		c := &http.Client{Jar: mustJar(t), CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
+		resp, err := c.PostForm(ts.URL+"/login", url.Values{"name": {name}, "password": {pw}})
+		if err != nil {
+			t.Fatal(err)
+		}
+		resp.Body.Close()
+		return c
+	}
+	get := func(c *http.Client, path string) (int, string) {
+		resp, err := c.Get(ts.URL + path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer resp.Body.Close()
+		b, _ := io.ReadAll(resp.Body)
+		return resp.StatusCode, string(b)
+	}
+	has := func(who, path, body string, want ...string) {
+		t.Helper()
+		if !complete(body) {
+			t.Errorf("%s %s: page is cut off", who, path)
+		}
+		for _, w := range want {
+			if !strings.Contains(body, w) {
+				t.Errorf("%s %s: missing %q", who, path, w)
+			}
+		}
+	}
+	admin, editor := login("admin", "longenough1"), login("ed", "longenough2")
+	fid := func(id int64) string { return strconv.FormatInt(id, 10) }
+
+	// users: tiles in alphabetical order, each leading to the user's page
+	_, body := get(admin, "/users")
+	has("admin", "/users", body, `class="panel user-tile"`, "Invite a helper", "Add a user directly")
+	if strings.Index(body, ">admin<") > strings.Index(body, ">ed<") {
+		t.Error("users are not sorted by name")
+	}
+
+	// the user's page: rights (podcasts alphabetical), password, remove
+	code, body := get(admin, "/users/"+fid(edID))
+	if code != 200 {
+		t.Fatalf("user page: %d", code)
+	}
+	has("admin", "/users/ed", body, "Rights and password", "Select all", "Remove user", `name="podcast"`, "May edit these podcasts")
+	if strings.Index(body, "Alpha Show") > strings.Index(body, "Zed Show") {
+		t.Error("podcasts on the user's page are not alphabetical")
+	}
+	// "Select all" shows everything ticked (not saved), and then offers "Select none"
+	_, body = get(admin, "/users/"+fid(edID)+"?preset=all")
+	if strings.Count(body, `name="podcast"`) != 2 || strings.Count(body, "checked") < 2 || !strings.Contains(body, "Select none") || !strings.Contains(body, "Not saved yet") {
+		t.Error("?preset=all doesn't tick every podcast and offer 'Select none'")
+	}
+	if u, _, _ := st.userByQuery(`id=?`, edID); len(u.Podcasts) != 1 {
+		t.Errorf("?preset=all saved something: %+v", u.Podcasts)
+	}
+
+	// the podcast page: admins get all four settings tabs, an editor only People + Spelling fixes
+	_, body = get(admin, "/feeds/"+fid(f1))
+	has("admin", "/feeds/1", body, "Podcast settings", `href="#general"`, `href="#feeds"`, `href="#people"`, `href="#spelling"`, `id="remove"`)
+	_, body = get(editor, "/feeds/"+fid(f1))
+	has("editor", "/feeds/1", body, "Podcast settings", `href="#people"`, `href="#spelling"`)
+	if strings.Contains(body, `href="#general"`) || strings.Contains(body, `id="remove"`) {
+		t.Error("an editor sees the admin tabs of the podcast settings")
+	}
+	// a podcast the editor may not edit: no settings panel at all
+	_, body = get(editor, "/feeds/"+fid(f2))
+	has("editor", "/feeds/2", body, "Alpha Show")
+	if strings.Contains(body, "Podcast settings") {
+		t.Error("an editor sees podcast settings of a podcast they may not edit")
+	}
+
+	// the rest that was touched
+	for _, p := range []string{"/help", "/start", "/search", "/", "/account", "/users/activity", "/work"} {
+		for who, c := range map[string]*http.Client{"admin": admin, "editor": editor} {
+			code, body := get(c, p)
+			if (p == "/users/activity" || p == "/work") && who == "editor" {
+				continue // admin pages
+			}
+			if code != 200 {
+				t.Errorf("%s %s: status %d", who, p, code)
+				continue
+			}
+			has(who, p, body)
+		}
+	}
 }

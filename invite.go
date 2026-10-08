@@ -271,7 +271,7 @@ func (s *Server) handleJoin(w http.ResponseWriter, r *http.Request) {
 		SameSite: http.SameSiteLaxMode, Secure: isHTTPS(r), Expires: time.Now().Add(sessionTTL)})
 	s.st.Audit(uid, actUserAdmin, 0, 0, 0, "joined via invite")
 	logf("Joined via invite: %s", name)
-	http.Redirect(w, r, "/account", http.StatusSeeOther)
+	http.Redirect(w, r, "/start", http.StatusSeeOther) // how to get going
 }
 
 // inviteQR renders the invite link as an inline SVG QR code (medium error
