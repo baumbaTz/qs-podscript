@@ -18,6 +18,7 @@
   <a href="#transcription">Transcription</a>
   <a href="#speakers">Speaker detection</a>
   {{if .ServerMode}}<a href="#server-work">Who transcribes</a>{{end}}
+  {{if .ServerMode}}<a href="#reidentify">Older episodes</a>{{end}}
   <a href="#look">Look</a>
   <a href="#move">{{if .ServerMode}}Export and import{{else}}Moving to another computer{{end}}</a>
 </nav>
@@ -194,6 +195,16 @@
 <p class="sub narrow">By default this server doesn't transcribe anything itself: “Transcribe again”, “Redo speaker detection” and new episodes wait for the helpers' computers – every connected QS-PodScript with “Transcribe for the server” ticked takes one episode at a time, so several computers work in parallel. The speaker detection settings above are sent along with every episode.</p>
 <form method="post" action="/settings/server-work" class="form">
   <label class="radio"><input type="checkbox" name="self" value="1" {{if .Data.SelfTranscribes}}checked{{end}}> This server transcribes too (only useful if it has its own graphics card – otherwise it is very slow and does one episode at a time)</label>
+  <button type="submit">Save</button>
+</form>
+</section>
+
+<section class="setup-sec" id="reidentify">
+<h2 class="section-title">Older episodes</h2>
+<p class="sub narrow">The more voices people confirm, the better the computer recognises who is speaking. So this server looks again at the speaker names of finished episodes by itself, one at a time, in the background: it redoes only the naming step (from the saved audio, on this server's processor – no helper computer is needed and the speaker detection itself is not repeated). Names people set by hand are never touched. It starts when somebody's confirmed voice data has grown or shrunk by a quarter ({{.Data.Reident.GainPct}} %, at least {{.Data.Reident.GainSec}} seconds) since an episode was last looked at, and only after nobody confirmed a voice for {{.Data.Reident.QuietH}} hours, so a checking session is finished first.</p>
+<form method="post" action="/settings/reidentify" class="form">
+  <label class="radio"><input type="checkbox" name="on" value="1" {{if .Data.Reident.On}}checked{{end}}> Look again at older episodes automatically</label>
+  <p class="sub">{{if not .Data.Reident.On}}Switched off.{{else if eq .Data.Reident.Waiting 0}}Nothing is waiting: every finished episode was named with today's voice data.{{else}}{{.Data.Reident.Waiting}} episode{{if ne .Data.Reident.Waiting 1}}s{{end}} waiting for a new look.{{with .Data.Reident.Blocking}} {{.}}{{end}}{{end}}</p>
   <button type="submit">Save</button>
 </form>
 </section>

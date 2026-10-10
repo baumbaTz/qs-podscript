@@ -1,5 +1,33 @@
 # DONE
 
+## 2026-10-08 – v0.40.0 – the server looks again at the speaker names of older episodes by itself
+- New reident.go. Names come from comparing speaker turns with the voiceprints of known
+  people (identify.go); a voiceprint is the average of the confirmed passages. More
+  confirmed passages = better voiceprints, so finished episodes are redone in the background,
+  server mode only, switch in Setup → Older episodes (on by default). Only the naming step
+  (saved audio, server CPU, one episode at a time, newest first); the speaker detection
+  (who spoke when) is not repeated and names set by hand are never touched.
+- Which episodes: every version now remembers the voice data its automatic names were made
+  with (versions.ident_stamp, schema v21; a new episode gets it when it is identified;
+  older episodes have none and get one look). An episode is stale when somebody's confirmed
+  seconds changed by >= 25 % and >= 20 s (up or down), a person with voice data came or
+  went, the roster changed or the threshold changed. One more passage for somebody with an
+  hour doesn't trigger a new pass.
+- When: checks 2 minutes after start, then every 30 minutes; goes only when nobody added a
+  voice sample for 6 hours and the server's worker is idle; stops the pass as soon as new
+  voice data arrives or the switch is turned off; 3 s between episodes; an episode that
+  failed is tried again after 24 h. Setup shows how many are waiting and why nothing
+  happens right now.
+- Fix that mattered for this: identifyVersion deleted the automatic names of a version
+  first and only then found out whether it could run (no saved audio, stopped, error), so a
+  failed run left a transcript without its automatic names. They are now replaced in one
+  transaction at the end (Store.ReplaceAutoCorrections) – also for the manual "Identify
+  again". Test shown to fail on the old code.
+- Tests (reident_test.go): the stale rule (12 cases), stamp contents, which episodes are
+  listed (no audio / unfinished / failed lately), the quiet period, failure keeps the old
+  names, replace keeps manual and other corrections, the Setup section and switch (server)
+  and the local Setup page without it. Manual: "Older episodes get a fresh look (admins)".
+
 ## 2026-10-08 – CI workflow (no new version, nothing to tag)
 - ci.yml: the "windows-cross" job took 19+ minutes (Linux and macOS: about 30 seconds). A cold
   cross-build alone is about 2 minutes, so something in that job was stuck or very slow.

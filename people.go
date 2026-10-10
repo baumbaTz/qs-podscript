@@ -388,6 +388,28 @@ func (s *Store) Correction(versionID, id int64) (Correction, error) {
 	return Correction{}, errors.New("correction not found")
 }
 
+// ReplaceAutoCorrections swaps a version's automatic corrections of one kind for
+// new ones in one transaction: if anything fails the old ones are still there
+// (a re-run that can't finish must never leave a transcript without its names).
+func (s *Store) ReplaceAutoCorrections(versionID int64, kind string, cs []Correction) error {
+	tx, err := s.db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	if _, err := tx.Exec(`DELETE FROM corrections WHERE version_id=? AND auto=1 AND kind=?`, versionID, kind); err != nil {
+		return err
+	}
+	now := time.Now().Unix()
+	for _, c := range cs {
+		if _, err := tx.Exec(`INSERT INTO corrections(version_id,kind,start_ms,end_ms,from_label,label,created_at,auto,score,text,origin,user_id)
+			VALUES(?,?,?,?,?,?,?,?,?,?,?,?)`, versionID, c.Kind, c.StartMs, c.EndMs, c.From, c.Label, now, c.Auto, c.Score, c.Text, c.Origin, c.UserID); err != nil {
+			return err
+		}
+	}
+	return tx.Commit()
+}
+
 // DeleteAutoCorrectionsKind removes automatic corrections of one kind
 // ("merge" = voice merging, "range" = speaker identification).
 func (s *Store) DeleteAutoCorrectionsKind(versionID int64, kind string) error {

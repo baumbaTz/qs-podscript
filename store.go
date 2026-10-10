@@ -18,7 +18,7 @@ import (
 // The readable transcript is built at display time (see merge.go). That makes
 // relabeling speakers instant and lets us re-run only diarization later.
 
-const schemaVersion = 20
+const schemaVersion = 21
 
 var schema = []string{
 	`CREATE TABLE settings(
@@ -352,6 +352,13 @@ func (s *Store) migrate() error {
 			}
 		}
 	}
+	if v < 21 {
+		// which voice data the automatic speaker names of a version were made with
+		// (see reident.go): '' = never, so every finished episode gets one fresh look
+		if _, err := tx.Exec(`ALTER TABLE versions ADD COLUMN ident_stamp TEXT NOT NULL DEFAULT ''`); err != nil {
+			return err
+		}
+	}
 	if _, err := tx.Exec(fmt.Sprintf(`PRAGMA user_version = %d`, schemaVersion)); err != nil {
 		return err
 	}
@@ -602,6 +609,17 @@ func (s *Store) Version(id int64) (Version, error) {
 		return v, fmt.Errorf("version %d not found", id)
 	}
 	return v, err
+}
+
+func (s *Store) SetIdentStamp(versionID int64, stamp string) error {
+	_, err := s.db.Exec(`UPDATE versions SET ident_stamp=? WHERE id=?`, stamp, versionID)
+	return err
+}
+
+func (s *Store) IdentStamp(versionID int64) string {
+	var st string
+	s.db.QueryRow(`SELECT ident_stamp FROM versions WHERE id=?`, versionID).Scan(&st)
+	return st
 }
 
 func (s *Store) SetEpisodeStatus(id int64, status, errMsg string) error {

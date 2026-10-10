@@ -82,6 +82,7 @@ func cmdServe(ctx context.Context, args []string) error {
 	}
 	go runSearchIndexer(ctx, st)
 	go runArtwork(ctx, st)
+	go runReidentify(ctx, s)
 	return s.serve(ctx, ln)
 }
 
@@ -415,6 +416,7 @@ func (s *Server) routes() http.Handler {
 	mux.HandleFunc("POST /setup/gpu-speakers", s.guard(accessAdmin, s.handleGPUSpeakers))
 	mux.HandleFunc("POST /settings/speakers", s.guard(accessAdmin, s.handleSpeakerSettings))
 	mux.HandleFunc("POST /settings/server-work", s.guard(accessAdmin, s.handleServerWork))
+	mux.HandleFunc("POST /settings/reidentify", s.guard(accessAdmin, s.handleReidentifySettings))
 	mux.HandleFunc("POST /settings/transcription", s.guard(accessAdmin, s.handleTranscriptionSettings))
 	mux.HandleFunc("POST /settings/look", s.guard(accessAdmin, s.handleLook))
 	mux.HandleFunc("GET /feeds/new", s.guard(accessAdmin, s.handleFeedNew))
@@ -588,7 +590,7 @@ func (s *Server) handleSetupPage(w http.ResponseWriter, r *http.Request) {
 	type modelOpt struct {
 		Key, Desc string
 	}
-	s.render(w, r, "setup", "Setup", "setup", map[string]any{
+	data := map[string]any{
 		"Models": []modelOpt{
 			{"turbo", "Large v3 turbo – best choice with a graphics card (1.6 GB)"},
 			{"turbo-q5", "Large v3 turbo, compressed – almost the same quality (550 MB)"},
@@ -623,7 +625,11 @@ func (s *Server) handleSetupPage(w http.ResponseWriter, r *http.Request) {
 			{"0.25", "Balanced – every 2.5 seconds, about 2.5× faster"},
 			{"0.5", "Fast – every 5 seconds, about 4× faster"},
 		},
-	})
+	}
+	if s.serverMode {
+		data["Reident"] = s.reidentSummary()
+	}
+	s.render(w, r, "setup", "Setup", "setup", data)
 }
 
 func (s *Server) handleTranscriptionSettings(w http.ResponseWriter, r *http.Request) {

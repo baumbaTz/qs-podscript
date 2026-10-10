@@ -223,10 +223,13 @@ func identifyVersion(ctx context.Context, st *Store, v Version, samples []float3
 		return res, err
 	}
 	res.PeopleKnown = len(refs)
-	if err := st.DeleteAutoCorrectionsKind(v.ID, "range"); err != nil {
-		return res, err
-	}
+	// what this run goes by (taken now: voice data added while it runs counts next time)
+	stamp, _ := st.identStamp(ep)
 	if len(refs) == 0 {
+		if err := st.DeleteAutoCorrectionsKind(v.ID, "range"); err != nil {
+			return res, err
+		}
+		st.SetIdentStamp(v.ID, stamp)
 		return res, nil
 	}
 	_, _, turns, err := st.LoadResults(v.ID)
@@ -355,11 +358,16 @@ func identifyVersion(ctx context.Context, st *Store, v Version, samples []float3
 		}
 		rs = append(rs, rng{t.StartMs, t.EndMs, p})
 	}
+	// the earlier automatic names are replaced only now, in one step: a run that
+	// fails or is stopped before this point leaves them as they were
+	named := make([]Correction, 0, len(rs))
 	for _, r := range rs {
-		if _, err := st.AddCorrectionID(v.ID, Correction{Kind: "range", StartMs: r.a, EndMs: r.b, Label: personLabel(r.p), Auto: true}); err != nil {
-			return res, err
-		}
+		named = append(named, Correction{Kind: "range", StartMs: r.a, EndMs: r.b, Label: personLabel(r.p), Auto: true})
 	}
+	if err := st.ReplaceAutoCorrections(v.ID, "range", named); err != nil {
+		return res, err
+	}
+	st.SetIdentStamp(v.ID, stamp)
 	res.Ranges = len(rs)
 	return res, nil
 }
