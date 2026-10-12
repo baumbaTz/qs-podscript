@@ -222,6 +222,8 @@ button.quiet:not(:disabled):hover, .button.quiet:hover { border-color: var(--ink
 .invite-list li { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .5rem .9rem; border-top: 1px solid var(--rule); padding-top: .5rem; }
 .invite-list li:first-child { border-top: 0; padding-top: 0; }
 .invite-list form { margin: 0; }
+.token-limit-form { display: flex; gap: .35rem; align-items: center; margin: 0; }
+.token-limit-form input[type=number] { width: 5rem; }
 /* "Get started": one card per download */
 .dl-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); gap: 1rem; margin: .5rem 0; }
 .dl-card { display: flex; flex-direction: column; gap: .3rem; margin: 0; color: var(--ink); text-decoration: none; }

@@ -98,23 +98,35 @@ type JobResult struct {
 
 // ---------------------------------------------------------------- tokens
 
-func (s *Store) NewAPIToken(userID int64, name string) (string, error) {
+// newToken makes one, of the given kind ("worker": a connected QS-PodScript,
+// full access as that user, see TokenUser - "public": the read-only API, see
+// public_api.go; it is never given to withUser, so it can never log in as the
+// user anywhere else on the site).
+func (s *Store) newToken(userID int64, name, kind string) (string, error) {
 	b := make([]byte, 32)
 	if _, err := rand.Read(b); err != nil {
 		return "", err
 	}
 	tok := "qsps_" + base64.RawURLEncoding.EncodeToString(b)
-	_, err := s.db.Exec(`INSERT INTO api_tokens(user_id,name,token_hash,created_at) VALUES(?,?,?,?)`,
-		userID, strings.TrimSpace(name), tokenHash(tok), time.Now().Unix())
+	_, err := s.db.Exec(`INSERT INTO api_tokens(user_id,name,token_hash,created_at,kind) VALUES(?,?,?,?,?)`,
+		userID, strings.TrimSpace(name), tokenHash(tok), time.Now().Unix(), kind)
 	return tok, err
 }
 
+func (s *Store) NewAPIToken(userID int64, name string) (string, error) {
+	return s.newToken(userID, name, "worker")
+}
+
+// TokenUser: the "worker" (connected computer) kind only - this is the app's
+// general request auth (withUser), so a "public" API key must never match
+// here, or it would let a read-only key log in as the user anywhere on the
+// site, not just the public API.
 func (s *Store) TokenUser(tok string) *User {
 	if !strings.HasPrefix(tok, "qsps_") {
 		return nil
 	}
 	h := tokenHash(tok)
-	u, _, err := s.userByQuery(`id=(SELECT user_id FROM api_tokens WHERE token_hash=?)`, h)
+	u, _, err := s.userByQuery(`id=(SELECT user_id FROM api_tokens WHERE token_hash=? AND kind='worker')`, h)
 	if err != nil {
 		return nil
 	}
@@ -125,14 +137,23 @@ func (s *Store) TokenUser(tok string) *User {
 }
 
 type APIToken struct {
-	ID        int64
-	Name      string
-	CreatedAt int64
-	LastSeen  int64
+	ID         int64
+	Name       string
+	CreatedAt  int64
+	LastSeen   int64
+	DailyLimit int
+	UsedToday  int
 }
 
+// APITokens: the "worker" (connected computer) keys of this user.
 func (s *Store) APITokens(userID int64) []APIToken {
-	rows, err := s.db.Query(`SELECT id,name,created_at,last_seen FROM api_tokens WHERE user_id=? ORDER BY id`, userID)
+	return s.tokensOf(userID, "worker")
+}
+
+func (s *Store) tokensOf(userID int64, kind string) []APIToken {
+	rows, err := s.db.Query(`SELECT t.id,t.name,t.created_at,t.last_seen,t.daily_limit,
+			COALESCE((SELECT count FROM api_usage WHERE token_id=t.id AND day=?),0)
+		FROM api_tokens t WHERE t.user_id=? AND t.kind=? ORDER BY t.id`, apiUsageDay(time.Now()), userID, kind)
 	if err != nil {
 		return nil
 	}
@@ -140,7 +161,7 @@ func (s *Store) APITokens(userID int64) []APIToken {
 	var out []APIToken
 	for rows.Next() {
 		var t APIToken
-		rows.Scan(&t.ID, &t.Name, &t.CreatedAt, &t.LastSeen)
+		rows.Scan(&t.ID, &t.Name, &t.CreatedAt, &t.LastSeen, &t.DailyLimit, &t.UsedToday)
 		out = append(out, t)
 	}
 	return out
@@ -154,6 +175,19 @@ func (s *Store) tokenName(tok string) string {
 
 func (s *Store) DeleteAPIToken(userID, id int64) error {
 	_, err := s.db.Exec(`DELETE FROM api_tokens WHERE id=? AND user_id=?`, id, userID)
+	return err
+}
+
+// PublicAPITokens: the "public" (read-only API) keys of this user.
+func (s *Store) PublicAPITokens(userID int64) []APIToken {
+	return s.tokensOf(userID, "public")
+}
+
+func (s *Store) SetTokenLimit(id int64, limit int) error {
+	if limit < 1 {
+		limit = 1
+	}
+	_, err := s.db.Exec(`UPDATE api_tokens SET daily_limit=? WHERE id=? AND kind='public'`, limit, id)
 	return err
 }
 

@@ -20,6 +20,10 @@
         {{range .Opts}}<option value="{{.Value}}" {{if eq .Value $d.PersonSel}}selected{{end}}>{{.Title}}</option>{{end}}
       {{if .Label}}</optgroup>{{end}}{{end}}
     </select></label>{{end}}
+    {{with $d.EpisodeOpts}}<label>Episode <select name="episode">
+      <option value="">All of this podcast</option>
+      {{range .}}<option value="{{.ID}}" {{if eq .ID $d.EpSel}}selected{{end}}>{{.Title}}</option>{{end}}
+    </select></label>{{end}}
     <label>Order <select name="sort">
       <option value="" {{if eq $q.Sort ""}}selected{{end}}>Best match</option>
       <option value="new" {{if eq $q.Sort "new"}}selected{{end}}>Newest episodes first</option>
@@ -32,7 +36,27 @@
 {{with $d.Indexing}}<p class="flash" role="status">The search index is being built ({{.}}) – some episodes may be missing for a moment.</p>{{end}}
 {{with $d.Error}}<p class="flash err" role="alert">{{.}}</p>{{end}}
 
-{{if $q.Q}}
+{{if $d.Browse}}
+  <h2 class="section-title">Everything {{$d.PersonName}} said{{if $d.EpisodeOpts}}{{if $d.EpSel}} in this episode{{else}} in this podcast{{end}}{{end}}</h2>
+  {{if $d.Hits}}
+  <p class="sub search-count">{{if gt $d.Total (len $d.Hits)}}{{$d.From}}–{{$d.To}} of {{$d.Total}} passages{{else}}{{$d.Total}} passage{{if ne $d.Total 1}}s{{end}}{{end}} · movie clips left out</p>
+  <ol class="hits">
+    {{range $d.Hits}}
+    <li class="hit-item">
+      <div class="hit-head">{{with .Art}}<img class="art art-s" src="/img/{{.}}" alt="" loading="lazy">{{end}}<a class="hit-ep" href="{{.Link ""}}">{{.Episode}}</a>
+        <span class="sub">{{.Podcast}} · {{date .PubDate}}</span></div>
+      <p class="hit-text"><a class="hit-time" href="{{.Link ""}}" title="Play from here">{{clock .StartMs}}</a> {{.Text}}</p>
+    </li>
+    {{end}}
+  </ol>
+  {{if or $d.Prev $d.Next}}<nav class="pager" aria-label="More results">
+    {{with $d.Prev}}<a class="button quiet" href="{{.}}">← Previous</a>{{end}}
+    {{with $d.Next}}<a class="button quiet" href="{{.}}">Next →</a>{{end}}
+  </nav>{{end}}
+  {{else if not $d.Error}}
+  <p class="empty">Nothing from {{$d.PersonName}} here yet.</p>
+  {{end}}
+{{else if $q.Q}}
   {{if $d.Hits}}
   <p class="sub search-count">{{if gt $d.Total (len $d.Hits)}}{{$d.From}}–{{$d.To}} of {{$d.Total}} passages{{else}}{{$d.Total}} passage{{if ne $d.Total 1}}s{{end}}{{end}}</p>
   <ol class="hits">

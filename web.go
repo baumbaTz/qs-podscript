@@ -423,6 +423,7 @@ func (s *Server) routes() http.Handler {
 	mux.HandleFunc("POST /feeds", s.guard(accessAdmin, s.handleFeedCreate))
 	mux.HandleFunc("GET /feeds/{id}", s.guard(accessPublic, s.handleFeed))
 	mux.HandleFunc("POST /feeds/{id}/settings", s.guard(accessAdmin, s.handleFeedSettings))
+	mux.HandleFunc("POST /feeds/{id}/api-hidden", s.guard(accessAdmin, s.handleFeedAPIHidden))
 	mux.HandleFunc("POST /feeds/{id}/refresh", s.guard(accessAdmin, s.handleFeedRefresh))
 	mux.HandleFunc("POST /feeds/{id}/delete", s.guard(accessAdmin, s.handleFeedDelete))
 	mux.HandleFunc("POST /feeds/{id}/first", s.guard(accessAdmin, s.handleFeedFirst))
@@ -498,8 +499,14 @@ func (s *Server) routes() http.Handler {
 		mux.HandleFunc("GET /work", s.guard(accessAdmin, s.handleWork))
 		mux.HandleFunc("POST /work/{id}/release", s.guard(accessAdmin, s.handleWorkRelease))
 		mux.HandleFunc("POST /keys/{tid}/delete", s.guard(accessUser, s.handleTokenDelete))
+		mux.HandleFunc("POST /keys/public", s.guard(accessUser, s.handlePublicTokenCreate))
+		mux.HandleFunc("POST /keys/{tid}/limit", s.guard(accessAdmin, s.handleTokenLimit))
 		mux.HandleFunc("POST /api/v1/login", s.handleAPILogin)
 		mux.HandleFunc("GET /api/v1/podcasts", s.handleAPIPodcasts)
+		mux.HandleFunc("GET /api/public/v1/podcasts", s.handlePublicPodcasts)
+		mux.HandleFunc("GET /api/public/v1/podcasts/{id}/episodes", s.handlePublicEpisodes)
+		mux.HandleFunc("GET /api/public/v1/episodes/{id}", s.handlePublicTranscript)
+		mux.HandleFunc("GET /api/public/v1/people/{id}/turns", s.handlePublicPersonTurns)
 		mux.HandleFunc("GET /api/v1/search", s.handleAPISearch)
 		mux.HandleFunc("POST /api/v1/work/claim", s.handleAPIClaim)
 		mux.HandleFunc("POST /api/v1/work/{lease}/progress", s.handleAPIProgress)
@@ -872,7 +879,7 @@ func (s *Server) handleFeed(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	s.render(w, r, "feed", f.Title, "feeds", map[string]any{
-		"Feed": f, "Episodes": shown, "Counts": counts, "Filter": filter, "Public": public,
+		"Feed": f, "Episodes": shown, "Counts": counts, "Filter": filter, "Public": public, "APIHidden": s.st.APIHidden(id),
 		"Roster": roster, "People": people, "RosterGroups": rosterGroups(people, roster),
 		"Sources": srcs, "SourceNames": srcNames, "Quiz": s.st.feedQuizProgress(f.ID), "First": s.st.feedIsFirst(f.ID),
 		"Spelling":  func() []SpellingRule { r, _ := s.st.SpellingRules(id); return r }(),
@@ -1168,6 +1175,19 @@ func (s *Server) handleFeedSettings(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	back(w, r, fmt.Sprintf("/feeds/%d", id), "Settings saved. They apply to episodes transcribed from now on.", "")
+}
+
+func (s *Server) handleFeedAPIHidden(w http.ResponseWriter, r *http.Request) {
+	id, ok := pathID(r)
+	if !ok {
+		http.NotFound(w, r)
+		return
+	}
+	if err := s.st.SetAPIHidden(id, r.FormValue("api_hidden") == "1"); err != nil {
+		back(w, r, fmt.Sprintf("/feeds/%d", id), "", err.Error())
+		return
+	}
+	back(w, r, fmt.Sprintf("/feeds/%d", id)+"#general", "Saved.", "")
 }
 
 func (s *Server) handleFeedRefresh(w http.ResponseWriter, r *http.Request) {

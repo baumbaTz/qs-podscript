@@ -18,7 +18,7 @@ import (
 // The readable transcript is built at display time (see merge.go). That makes
 // relabeling speakers instant and lets us re-run only diarization later.
 
-const schemaVersion = 21
+const schemaVersion = 22
 
 var schema = []string{
 	`CREATE TABLE settings(
@@ -357,6 +357,27 @@ func (s *Store) migrate() error {
 		// (see reident.go): '' = never, so every finished episode gets one fresh look
 		if _, err := tx.Exec(`ALTER TABLE versions ADD COLUMN ident_stamp TEXT NOT NULL DEFAULT ''`); err != nil {
 			return err
+		}
+	}
+	if v < 22 {
+		// users.api_access: may this account hold public API keys (see public_api.go) -
+		// separate from admin/editor, so somebody can have API access with no right to
+		// touch a transcript, or an editor can also have it
+		for _, q := range []string{
+			`ALTER TABLE users ADD COLUMN api_access INTEGER NOT NULL DEFAULT 0`,
+			// existing tokens are all the worker/device kind (a connected QS-PodScript);
+			// 'public' is new and only ever set for a key made through /account or a
+			// user's page
+			`ALTER TABLE api_tokens ADD COLUMN kind TEXT NOT NULL DEFAULT 'worker'`,
+			`ALTER TABLE api_tokens ADD COLUMN daily_limit INTEGER NOT NULL DEFAULT 20000`,
+			`CREATE TABLE api_usage(token_id INTEGER NOT NULL REFERENCES api_tokens(id) ON DELETE CASCADE,
+				day TEXT NOT NULL, count INTEGER NOT NULL DEFAULT 0, PRIMARY KEY(token_id, day))`,
+			// a podcast can be left out of the public API while staying on the website
+			`ALTER TABLE feeds ADD COLUMN api_hidden INTEGER NOT NULL DEFAULT 0`,
+		} {
+			if _, err := tx.Exec(q); err != nil {
+				return fmt.Errorf("%w\n%s", err, q)
+			}
 		}
 	}
 	if _, err := tx.Exec(fmt.Sprintf(`PRAGMA user_version = %d`, schemaVersion)); err != nil {

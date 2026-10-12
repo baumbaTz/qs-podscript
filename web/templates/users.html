@@ -21,7 +21,7 @@
 {{range .Data.Users}}
   <li><a class="panel user-tile" id="u{{.ID}}" href="/users/{{.ID}}">
     <span class="ut-name">{{.Name}}</span>
-    <span class="ut-tags"><span class="tag-soft">{{if eq .Role "admin"}}admin{{else}}editor · {{len .Podcasts}} podcast{{if ne (len .Podcasts) 1}}s{{end}}{{end}}</span>{{if and $.User (eq $.User.ID .ID)}}<span class="tag-soft">you</span>{{end}}</span>
+    <span class="ut-tags"><span class="tag-soft">{{if eq .Role "admin"}}admin{{else}}editor · {{len .Podcasts}} podcast{{if ne (len .Podcasts) 1}}s{{end}}{{end}}</span>{{if .APIAccess}}<span class="tag-soft">API</span>{{end}}{{if and $.User (eq $.User.ID .ID)}}<span class="tag-soft">you</span>{{end}}</span>
     {{with index $.Data.Stats .ID}}<span class="ut-meta">{{.Transcribed}} transcribed{{if .BusySec}} ({{hours .BusySec}} computer time){{end}}</span>
     <span class="ut-meta">{{.CleanedEps}} cleaned up</span>
     <span class="ut-meta">last active {{ago .LastActive}}</span>{{end}}

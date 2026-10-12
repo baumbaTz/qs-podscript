@@ -1,5 +1,54 @@
 # DONE
 
+## 2026-10-09 – v0.41.0 – a public, read-only API for using the transcripts elsewhere; browse what one person said
+- New public_api.go: /api/public/v1/podcasts, /podcasts/{id}/episodes (paginated,
+  ?since= for sync), /episodes/{id} (turn-level transcript, ads left out, clips kept
+  and tagged mark=clip), /people/{id}/turns (one person's lines, everywhere or
+  narrowed with ?podcast=/?episode=, clips left out there since the point is what
+  they actually said). Separate, versioned path from the app's own internal
+  /api/v1 (helper protocol, in-page search), so that one can keep changing to suit
+  this app without breaking anyone else's project.
+- Access: a new "public" kind of API token (api_tokens.kind, schema v22), bearer
+  qsps_…, completely separate from the existing "worker" (connected computer)
+  kind – TokenUser() (the app's general request auth) now only matches kind=
+  'worker', so a public key can never log in anywhere else on the site or touch the
+  internal worker endpoints (claim/progress/fail/result), by construction, not by a
+  permission check that could be gotten wrong later.
+- users.api_access: a user can have API access independent of admin/editor and
+  podcast rights (e.g. an account with API access and no edit rights at all).
+  Admins always may use the API. Set on the user's page next to the admin and
+  podcast-rights checkboxes (User.MayUsePublicAPI()); a tile on the Users page
+  gets an "API" tag. A "Public API access" panel there lists a user's keys
+  (created/last used/today's use/limit), lets them (or an admin) create a new one,
+  and admins can edit a key's daily limit or revoke it.
+- Rate limit: api_usage(token_id,day,count), a generous default per key
+  (20000/day), reset at UTC midnight, X-RateLimit-Limit / X-RateLimit-Remaining on
+  every response, 429 past it. An admin can raise or lower one key's limit without
+  touching others.
+- feeds.api_hidden: a podcast can be left out of the public API while staying
+  exactly as visible on the website – toggle on Podcast settings → General.
+- Search page: picking someone under "Said by" with no words typed now browses
+  everything they said (full text, not a snippet) instead of showing the "type
+  something" hint; narrows with the existing podcast filter and a new episode
+  filter (appears once a podcast is picked, listing only episodes they're actually
+  in). Built on the same browseTurns() the API uses. Useful on its own for an
+  admin/editor checking one person's lines for cleanup.
+- Manual: new section "14. Public API (for other projects)" – getting a key,
+  the four endpoints, the rate limit, hiding a podcast, a non-enforced but firm
+  credit request.
+- Tests (public_api_test.go): a real fixture (2 podcasts, 3 episodes, 3 people, a
+  movie-clip line) indexed through the real search indexer, then exercised through
+  the real HTTP routes and templates: every endpoint's data and scoping, pagination,
+  ?since=, the rate limit actually triggering and the default being generous,
+  api_hidden hiding from the API but not the website, the Search page's browse mode
+  (and that a normal word search is unaffected), and – the properties that matter
+  most – that a public key can never authenticate as the user anywhere else on the
+  site (checked without auto-following the login redirect, which hid this once) nor
+  claim work on the internal worker API, and that a worker key is correctly rejected
+  by the public API while continuing to work normally on its own endpoints. Two real
+  bugs were caught and fixed this way: episodes were ordered by id instead of
+  publish date, and the auth lookup read user_id from the wrong query.
+
 ## 2026-10-08 – v0.40.0 – the server looks again at the speaker names of older episodes by itself
 - New reident.go. Names come from comparing speaker turns with the voiceprints of known
   people (identify.go); a voiceprint is the average of the confirmed passages. More

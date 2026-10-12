@@ -39,6 +39,7 @@
   <form method="post" action="/users/{{$u.ID}}" class="form">
     <label class="radio"><input type="checkbox" name="admin" value="1" {{if eq $u.Role "admin"}}checked{{end}} {{if $self}}disabled{{end}}> Admin (may do everything)</label>
     {{if $self}}<input type="hidden" name="admin" value="1">{{end}}
+    <label class="radio"><input type="checkbox" name="api_access" value="1" {{if $u.APIAccess}}checked{{end}}> API access (may hold public API keys){{if eq $u.Role "admin"}} <small>Admins have this anyway.</small>{{end}}</label>
     <fieldset id="rights">
       <legend>May edit these podcasts</legend>
       {{if $feeds}}<p class="rights-toggle">{{if .Data.AllRights}}<a class="button quiet small" href="/users/{{$u.ID}}?preset=none#rights">Select none</a>{{else}}<a class="button quiet small" href="/users/{{$u.ID}}?preset=all#rights">Select all</a>{{end}}{{if .Data.Preset}} <small class="sub">Not saved yet – change what you like, then press Save.</small>{{end}}</p>{{end}}
@@ -53,6 +54,32 @@
     <button type="submit" class="danger">Remove user</button>
   </form>
   {{end}}
+</section>
+{{end}}
+
+{{if $u.MayUsePublicAPI}}
+<section class="panel" id="api-keys">
+  <h2 class="section-title">Public API access</h2>
+  <p class="sub narrow">Read-only keys for <a href="/help#api">the public API</a> - other people's projects using the transcripts. A key never lets anyone log in or change anything, it only reads what the site already shows.</p>
+  {{with .Data.PublicTokens}}
+  <table class="episodes stack">
+    <thead><tr><th>Key</th><th>Created</th><th>Last used</th><th class="num">Today</th>{{if $.IsAdmin}}<th>Daily limit</th>{{end}}<th><span class="sr">Action</span></th></tr></thead>
+    <tbody>
+    {{range .}}
+      <tr><td class="main">{{.Name}}</td><td class="date" data-label="Created">{{ago .CreatedAt}}</td><td class="date" data-label="Last used">{{if .LastSeen}}{{ago .LastSeen}}{{else}}never{{end}}</td>
+        <td class="num" data-label="Today">{{.UsedToday}} / {{.DailyLimit}}</td>
+        {{if $.IsAdmin}}<td data-label="Daily limit"><form method="post" action="/keys/{{.ID}}/limit" class="token-limit-form">
+          <input type="hidden" name="user" value="{{$u.ID}}"><input type="number" name="limit" value="{{.DailyLimit}}" min="1" size="6"><button type="submit" class="quiet small">Save</button></form></td>{{end}}
+        <td class="act"><form method="post" action="/keys/{{.ID}}/delete"><input type="hidden" name="user" value="{{$u.ID}}"><button type="submit" class="quiet small">Revoke</button></form></td></tr>
+    {{end}}
+    </tbody>
+  </table>
+  {{else}}<p class="empty">No keys yet.</p>{{end}}
+  <form method="post" action="/keys/public" class="form">
+    <input type="hidden" name="user" value="{{$u.ID}}">
+    <label>Name this key (what it's for) <input name="name" placeholder="e.g. my captioning tool" maxlength="60"></label>
+    <button type="submit">Create a key</button>
+  </form>
 </section>
 {{end}}
 

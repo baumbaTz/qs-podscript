@@ -37,6 +37,7 @@
     <li><a href="#trouble">When something goes wrong</a></li>
     <li><a href="#tools">What QS-PodScript uses</a></li>
     <li><a href="#server">The shared homeserver</a></li>
+    <li><a href="#api">Public API (for other projects)</a></li>
   </ol>
 </nav>
 
@@ -307,6 +308,28 @@
 <h3>Helpers' work (admins)</h3>
 <p><i>Helpers' work</i> (top bar or <i>Users</i>) lists what is <b>waiting</b> for a helper, in the order the helpers get it, and which episodes helpers' computers are working on right now: who, on which computer, since when and until when. A reservation runs out on its own if a computer goes quiet. <i>Hand back</i> puts an episode into the queue at once (that computer's result is then refused). Episodes that failed three times on helpers' computers are listed below it with <i>Try again</i>.</p>
 <p>Server podcasts need a connection to the server. If it is down, those pages say so; your own podcasts keep working.</p>
+</section>
+
+<section id="api">
+<h2>14. Public API (for other projects)</h2>
+<p>A small, read-only API for using these transcripts in somebody else's project – a captioning tool, a research archive, a fan site, anything. It shows the same data anybody can already read on this website, just in a stable, machine-readable shape, separate from the address this site's own pages and search box use internally (which can change at any time). It gives <b>whole speaker turns</b> (one block of text per turn, with its start and end time), not the timing of every single word.</p>
+<h3>Getting a key</h3>
+<p>Ask an admin for API access. Once they've switched it on for your account (<i>Users → your page → Rights and password → API access</i>), a <b>Public API access</b> section appears there with a <i>Create a key</i> form. The key is shown once – copy it right away. A key never lets anyone log in or change anything on the site; it can only read from the four endpoints below. Admins always have access, with no separate switch needed.</p>
+<p>Send it as <code>Authorization: Bearer qsps_…</code> on every request.</p>
+<h3>Endpoints</h3>
+<ul>
+  <li><code>GET /api/public/v1/podcasts</code> – every podcast open to the API, with id, title, language and how many episodes are transcribed.</li>
+  <li><code>GET /api/public/v1/podcasts/{id}/episodes</code> – that podcast's finished episodes, newest first, 50 per page (<code>?page=</code>). Add <code>?since=</code> with the <code>cursor</code> value an earlier call returned, to get only episodes that are new or were corrected since – for keeping a copy in sync instead of re-downloading everything.</li>
+  <li><code>GET /api/public/v1/episodes/{id}</code> – one episode's turns: who, when (milliseconds), what they said. Ad breaks are left out; a line from a movie clip is kept but marked <code>"mark":"clip"</code>, since it's still part of what aired.</li>
+  <li><code>GET /api/public/v1/people/{id}/turns</code> – everything one person said: across every open podcast, or narrowed with <code>?podcast=</code>, or down to one <code>?episode=</code> (50 per page, <code>?page=</code>). Movie clips are left out here, since the point is what that person actually said.</li>
+</ul>
+<p>The same browsing is in the web UI too: the <a href="/search">Search</a> page, pick someone under <b>Said by</b> with no words typed – it shows everything they said, with a podcast and (once one is picked) an episode filter, handy for an admin or editor checking one person's lines for cleanup.</p>
+<h3>Rate limit</h3>
+<p>Each key has a generous daily limit (resets at midnight UTC); every response carries <code>X-RateLimit-Limit</code> and <code>X-RateLimit-Remaining</code> so a well-behaved client can watch it. Past the limit, requests get <code>429</code> until it resets. An admin can raise or lower one key's limit on the user's page without touching anyone else's.</p>
+<h3>Leaving a podcast out (admins)</h3>
+<p>A podcast can be left out of the API while staying exactly as visible on the website: <i>Podcast settings → General → Leave this podcast out of the public API</i>.</p>
+<h3>If you use this</h3>
+<p>There's nothing to sign and nothing is enforced, but please credit this site and link back to it wherever the transcripts end up – it costs you a line and means a lot to the people who did the actual correcting.</p>
 </section>
 </article>
 {{end}}

@@ -61,6 +61,12 @@
     <button type="submit">Save settings</button>
   </form>
   {{template "langs"}}
+  {{if .ServerMode}}
+  <form method="post" action="/feeds/{{$f.ID}}/api-hidden" class="form">
+    <label class="radio"><input type="checkbox" name="api_hidden" value="1" {{if .Data.APIHidden}}checked{{end}}> Leave this podcast out of the public API<small>It still shows on the website as before. See <a href="/help#api">the API docs</a>.</small></label>
+    <button type="submit">Save</button>
+  </form>
+  {{end}}
   <details class="danger" id="remove">
     <summary>Remove this podcast</summary>
     <p class="sub narrow">Removes <b>{{$f.Title}}</b> with all its episodes, transcripts, versions, speaker corrections, checked passages and audio copies – from this {{if .ServerMode}}server{{else}}computer{{end}}. People and their voice samples stay (they can be on other podcasts too); spelling fixes that were only for this podcast are removed. This can't be undone{{if not .ServerMode}} – make an export first (Setup) if you might want it back{{end}}.</p>

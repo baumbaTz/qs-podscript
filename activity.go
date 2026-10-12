@@ -448,10 +448,11 @@ func (s *Server) renderRecord(w http.ResponseWriter, r *http.Request, u *User, o
 	}
 	data := map[string]any{
 		"U": u, "Own": own, "Stats": s.st.UserStats(u.ID),
-		"Work":     firstN(s.st.computerWorkBy(u.ID), 200),
-		"Cleaned":  s.st.episodesCleanedBy(u.ID, 200),
-		"Tokens":   s.st.APITokens(u.ID),
-		"Activity": s.st.Activity(u.ID, 100),
+		"Work":         firstN(s.st.computerWorkBy(u.ID), 200),
+		"Cleaned":      s.st.episodesCleanedBy(u.ID, 200),
+		"Tokens":       s.st.APITokens(u.ID),
+		"PublicTokens": s.st.PublicAPITokens(u.ID),
+		"Activity":     s.st.Activity(u.ID, 100),
 	}
 	if !own {
 		// rights and password of this user (admins). "Select all" / "Select none"
@@ -536,6 +537,54 @@ func (s *Server) handleTokenDelete(w http.ResponseWriter, r *http.Request) {
 	}
 	s.st.Audit(me.ID, actTokenRevoked, 0, 0, 0, fmt.Sprintf("key %d of user %d", tid, uid))
 	back(w, r, to, "The computer's key was removed. It has to connect again to help.", "")
+}
+
+// handlePublicTokenCreate: a new public-API key for a user (self-service, or
+// an admin making one for somebody while looking at their page).
+func (s *Server) handlePublicTokenCreate(w http.ResponseWriter, r *http.Request) {
+	me := currentUser(r)
+	uid, _ := strconv.ParseInt(r.FormValue("user"), 10, 64)
+	to := "/account"
+	if uid != me.ID {
+		if !me.IsAdmin() {
+			http.Error(w, "forbidden", http.StatusForbidden)
+			return
+		}
+		to = fmt.Sprintf("/users/%d", uid)
+	}
+	u, _, err := s.st.userByQuery(`id=?`, uid)
+	if err != nil || !u.MayUsePublicAPI() {
+		back(w, r, to, "", "This user doesn't have API access.")
+		return
+	}
+	name := strings.TrimSpace(r.FormValue("name"))
+	if name == "" {
+		name = "API key"
+	}
+	tok, err := s.st.newToken(uid, name, "public")
+	if err != nil {
+		back(w, r, to, "", err.Error())
+		return
+	}
+	s.st.Audit(me.ID, actTokenRevoked, 0, 0, 0, fmt.Sprintf("new public API key for user %d", uid))
+	back(w, r, to+"#api-keys", "New key (shown once, copy it now): "+tok, "")
+}
+
+// handleTokenLimit: an admin sets one key's own daily limit.
+func (s *Server) handleTokenLimit(w http.ResponseWriter, r *http.Request) {
+	uid, _ := strconv.ParseInt(r.FormValue("user"), 10, 64)
+	tid, _ := strconv.ParseInt(r.PathValue("tid"), 10, 64)
+	limit, err := strconv.Atoi(r.FormValue("limit"))
+	to := fmt.Sprintf("/users/%d", uid) + "#api-keys"
+	if err != nil || limit < 1 {
+		back(w, r, to, "", "The daily limit needs to be a number, at least 1.")
+		return
+	}
+	if err := s.st.SetTokenLimit(tid, limit); err != nil {
+		back(w, r, to, "", err.Error())
+		return
+	}
+	back(w, r, to, "Saved.", "")
 }
 
 func firstN[T any](s []T, n int) []T {

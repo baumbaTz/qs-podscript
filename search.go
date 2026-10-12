@@ -649,7 +649,40 @@ func (s *Server) handleSearch(w http.ResponseWriter, r *http.Request) {
 	if ix := searchIndexing(); ix != "" {
 		data["Indexing"] = ix
 	}
-	if sq.Q != "" {
+	epSel, _ := strconv.ParseInt(r.URL.Query().Get("episode"), 10, 64)
+	if sq.Q == "" && sq.Person > 0 {
+		// browse mode: no words typed, just "everything X said" - optionally
+		// narrowed to one podcast and, once a podcast is chosen, one episode
+		data["Browse"] = true
+		data["EpSel"] = epSel
+		for _, p := range people {
+			if p.ID == sq.Person {
+				data["PersonName"] = p.Name
+			}
+		}
+		if sq.Feed > 0 {
+			if eps, err := s.st.PersonEpisodesIn(sq.Feed, sq.Person); err == nil {
+				data["EpisodeOpts"] = eps
+			}
+		} else {
+			epSel = 0 // an episode from a previous podcast selection doesn't carry over
+		}
+		hits, total, err := browseTurns(s.st, sq.Feed, epSel, sq.Person, searchPageSize, (sq.Page-1)*searchPageSize)
+		if err != nil {
+			debugf("browse person=%d feed=%d ep=%d: %v", sq.Person, sq.Feed, epSel, err)
+			data["Error"] = "That didn't work – try again."
+		}
+		data["Hits"], data["Total"] = hits, total
+		shown := (sq.Page-1)*searchPageSize + len(hits)
+		if shown < total {
+			data["Next"] = browseURL(sq, podSel, personSel, epSel, sq.Page+1)
+		}
+		if sq.Page > 1 {
+			data["Prev"] = browseURL(sq, podSel, personSel, epSel, sq.Page-1)
+		}
+		data["From"] = (sq.Page-1)*searchPageSize + 1
+		data["To"] = shown
+	} else if sq.Q != "" {
 		hits, total, err := runSearch(s.st, sq, searchPageSize, (sq.Page-1)*searchPageSize)
 		if err != nil {
 			debugf("search %q: %v", sq.Q, err)
@@ -671,6 +704,25 @@ func (s *Server) handleSearch(w http.ResponseWriter, r *http.Request) {
 		title = sq.Q + " – Search"
 	}
 	s.render(w, r, "search", title, "search", data)
+}
+
+// browseURL: like searchURL, but for the person-browse mode (no q, carries
+// the episode filter instead).
+func browseURL(sq searchQuery, pod, person string, ep int64, page int) string {
+	v := url.Values{}
+	if pod != "" {
+		v.Set("podcast", pod)
+	}
+	if person != "" {
+		v.Set("person", person)
+	}
+	if ep > 0 {
+		v.Set("episode", strconv.FormatInt(ep, 10))
+	}
+	if page > 1 {
+		v.Set("page", strconv.Itoa(page))
+	}
+	return "/search?" + v.Encode()
 }
 
 func searchURL(sq searchQuery, pod, person string, page int) string {

@@ -46,7 +46,12 @@ type User struct {
 	Podcasts    map[int64]bool // editor: podcasts (feed ids) they may edit
 	DisplayName string         // name shown publicly if ShowName (empty: login name)
 	ShowName    bool           // false: shown as "Volunteer <id>"
+	APIAccess   bool           // may hold public API keys (see public_api.go) - independent of Role
 }
+
+// MayUsePublicAPI: admins always may (they may do everything); anybody else needs
+// the api_access flag an admin gave them.
+func (u *User) MayUsePublicAPI() bool { return u != nil && (u.Role == "admin" || u.APIAccess) }
 
 // PublicName is how others (not admins) see this user in credits.
 func (u *User) PublicName() string {
@@ -171,6 +176,11 @@ func (s *Store) SetUserRole(userID int64, role string) error {
 	return err
 }
 
+func (s *Store) SetUserAPIAccess(id int64, on bool) error {
+	_, err := s.db.Exec(`UPDATE users SET api_access=? WHERE id=?`, on, id)
+	return err
+}
+
 func (s *Store) SetUserPodcasts(userID int64, feeds []int64) error {
 	tx, err := s.db.Begin()
 	if err != nil {
@@ -205,8 +215,8 @@ func (s *Store) DeleteUser(userID int64) error {
 func (s *Store) userByQuery(q string, args ...any) (*User, string, error) {
 	u := &User{Podcasts: map[int64]bool{}}
 	var hash string
-	if err := s.db.QueryRow(`SELECT id,name,role,pass_hash,display_name,show_name FROM users WHERE `+q, args...).
-		Scan(&u.ID, &u.Name, &u.Role, &hash, &u.DisplayName, &u.ShowName); err != nil {
+	if err := s.db.QueryRow(`SELECT id,name,role,pass_hash,display_name,show_name,api_access FROM users WHERE `+q, args...).
+		Scan(&u.ID, &u.Name, &u.Role, &hash, &u.DisplayName, &u.ShowName, &u.APIAccess); err != nil {
 		return nil, "", err
 	}
 	rows, err := s.db.Query(`SELECT feed_id FROM user_podcasts WHERE user_id=?`, u.ID)
@@ -701,6 +711,10 @@ func (s *Server) handleUserUpdate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := s.st.SetUserPodcasts(id, feeds); err != nil {
+		back(w, r, to, "", err.Error())
+		return
+	}
+	if err := s.st.SetUserAPIAccess(id, r.FormValue("api_access") == "1"); err != nil {
 		back(w, r, to, "", err.Error())
 		return
 	}
