@@ -110,7 +110,7 @@ jobs:
           printf '\n---\n**Downloads:** Linux (x64, tar.gz), Windows (x64, zip), macOS (Apple Silicon, zip – new, untested), source.\nInstall notes: README.txt inside each package. Checksums: SHA256SUMS.txt\n' >> notes.md
           (cd out && sha256sum * > SHA256SUMS.txt)
           cat notes.md
-      - uses: softprops/action-gh-release@v2
+      - uses: softprops/action-gh-release@v3
         with:
           name: QS-PodScript ${{ needs.check.outputs.version }}
           body_path: notes.md
