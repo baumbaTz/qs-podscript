@@ -1,5 +1,20 @@
 # DONE
 
+## 2026-10-13 – v0.41.1 – help page: a clearer call to help, moved up, with a GitHub link
+- The public /help page (visitors not logged in to a server) now leads with a
+  "Want to help?" box right under the intro – what helping actually means
+  (checking words and who's speaking), a Get started button, and a direct link
+  to the project on GitHub, so people looking to contribute can find the repo
+  without hunting for the small print at the bottom.
+- Reordered what follows: Searching before Reading and listening – a reader
+  who isn't browsing by podcast most likely wants to find something, so that
+  comes first. (Easy to flip back if it reads worse in practice.)
+- The old bottom-of-page "Helping" paragraph and the small GitHub mention are
+  folded into the one box up top, instead of repeating the pitch twice.
+- Tests: a real HTTP render of the anonymous /help page checks the page comes
+  out whole, both buttons and the GitHub link are present, and the three
+  sections appear in the new order.
+
 ## 2026-10-09 – v0.41.0 – a public, read-only API for using the transcripts elsewhere; browse what one person said
 - New public_api.go: /api/public/v1/podcasts, /podcasts/{id}/episodes (paginated,
   ?since= for sync), /episodes/{id} (turn-level transcript, ads left out, clips kept

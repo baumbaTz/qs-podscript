@@ -483,6 +483,9 @@ button.switch.failed .track { background: var(--err); }
 .manual li { margin: .3rem 0; }
 .manual code, .manual kbd { font-size: .88em; background: color-mix(in srgb, var(--ink) 8%, transparent); padding: .05rem .3rem; border-radius: 3px; }
 .manual kbd { border: 1px solid var(--rule); }
+.manual .cta { border-color: var(--link); margin: 1.5rem 0; }
+.manual .cta h2 { margin: 0 0 .4rem; padding: 0; border: 0; font-size: 1.1rem; }
+.manual .cta-actions { display: flex; flex-wrap: wrap; gap: .6rem; margin: .9rem 0 0; }
 .manual .toc { background: var(--panel); border: 1px solid var(--rule); border-radius: var(--r-md); padding: .75rem 1.25rem; margin: 1.25rem 0; }
 .manual .toc ol { margin: 0; padding-left: 1.25rem; columns: 2; column-gap: 2rem; }
 @media (max-width: 760px) { .manual .toc ol { columns: 1; } }
